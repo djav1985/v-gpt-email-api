@@ -143,26 +143,20 @@ def decode_header_value(val):
     if val is None:
         return None
 
-    # Add a charset for 'unknown-8bit' as 'utf-8' to handle unknown encodings
-    charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
-
+    # Decode headers while handling unknown charsets and errors
     decoded = decode_header(val)
     header_parts = []
     for decoded_string, encoding in decoded:
         if isinstance(decoded_string, bytes):
             try:
-                # Decode with detected or fallback encoding, replace errors
-                text = decoded_string.decode(encoding or 'utf-8', errors='replace')
+                # Decode with the specified charset or fall back to utf-8, replacing errors
+                decoded_string = decoded_string.decode(encoding or 'utf-8', errors='replace')
             except UnicodeDecodeError:
-                # If decode fails, replace problematic characters
-                text = decoded_string.decode('utf-8', errors='replace')
-        else:
-            text = decoded_string
-
-        # Sanitize the text to remove any surrogates using regex
-        text = re.sub(r'[\ud800-\udfff]', '', text)
-
-        header_parts.append(text)
+                # If utf-8 fails, force a decode ignoring errors to avoid crashing
+                decoded_string = decoded_string.decode('utf-8', errors='ignore')
+        # Use a regex to remove any surrogates or other non-UTF-8 compatible characters
+        decoded_string = re.sub(r'[\ud800-\udfff]', '', decoded_string)
+        header_parts.append(decoded_string)
 
     return ''.join(header_parts)
 
