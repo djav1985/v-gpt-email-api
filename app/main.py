@@ -162,14 +162,14 @@ def decode_header_value(val):
     # Return the sanitized and decoded string
     return decoded_string
 
-# Read emails endpoint
+# Updated ReadEmailsRequest model to accept only one email ID
 class ReadEmailsRequest(BaseModel):
     account: str
     folder: str
-    email_ids: List[str]
+    email_id: str  # Changed from List[str] to str
 
 @app.post("/read_emails", operation_id="read_emails")
-async def read_emails(request: ReadEmailsRequest) -> List[Dict[str, str]]:
+async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -178,29 +178,25 @@ async def read_emails(request: ReadEmailsRequest) -> List[Dict[str, str]]:
         try:
             mail.login(account_details['email'], account_details['password'])
             mail.select(request.folder)
-            emails = []
-            for email_id in request.email_ids:
-                try:
-                    status, email_data = mail.fetch(email_id, '(RFC822)')
-                    if status != 'OK':
-                        print(f"Failed to fetch email ID {email_id}: {status}")
-                        continue
 
-                    raw_email = email_data[0][1].decode('utf-8')
-                    message = message_from_bytes(raw_email)
-                    email_details = {
-                        "email_id": email_id,
-                        "sender": message['From'],
-                        "subject": message.get('Subject', "No Subject"),
-                        "date": message['Date'],
-                        "body": get_email_body(message)
-                    }
-                    emails.append(email_details)
-                except Exception as e:
-                    print(f"Error fetching email ID {email_id}: {e}")
-                    continue
+            email_id = request.email_id  # Get the single email ID from the request
+            try:
+                status, email_data = mail.fetch(email_id, '(RFC822)')
+                if status != 'OK':
+                    raise HTTPException(status_code=404, detail=f"Failed to fetch email ID {email_id}: {status}")
 
-            return emails
+                raw_email = email_data[0][1].decode('utf-8')
+                message = message_from_bytes(raw_email)
+                email_details = {
+                    "email_id": email_id,
+                    "sender": message['From'],
+                    "subject": message.get('Subject', "No Subject"),
+                    "date": message['Date'],
+                    "body": get_email_body(message)
+                }
+                return email_details
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error fetching email ID {email_id}: {e}")
         except imaplib.IMAP4.error as e:
             raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
