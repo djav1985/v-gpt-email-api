@@ -4,6 +4,7 @@ import json
 import imaplib
 import smtplib
 import email
+import codecs
 from pydantic import BaseModel  # Data validation
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Security
@@ -140,24 +141,24 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
 def decode_header_value(val):
     if val is None:
         return None
-    charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
-    try:
-        decoded = decode_header(val)
-        header_parts = []
-        for decoded_string, encoding in decoded:
-            if isinstance(decoded_string, bytes):
-                try:
-                    # Attempt to decode with the specified encoding or utf-8
-                    decoded_string = decoded_string.decode(encoding or 'utf-8', errors='replace')
-                except UnicodeDecodeError:
-                    # Fallback for undecodable bytes, replace surrogates if necessary
-                    decoded_string = decoded_string.decode('utf-8', errors='ignore')
+    decoded = decode_header(val)
+    header_parts = []
+    for decoded_string, encoding in decoded:
+        if isinstance(decoded_string, bytes):
+            try:
+                # Try to decode with detected encoding or fall back to UTF-8.
+                text = decoded_string.decode(encoding or 'utf-8', errors='strict')
+            except UnicodeDecodeError:
+                # Handle undecodable bytes, skip surrogates
+                text = codecs.decode(decoded_string, 'utf-8', 'ignore')
+            except UnicodeEncodeError:
+                # Handle specific surrogate issues
+                text = codecs.decode(decoded_string, 'utf-8', 'replace')
+            header_parts.append(text)
+        else:
+            # Already decoded string
             header_parts.append(decoded_string)
-        return ''.join(header_parts)
-    except UnicodeEncodeError as e:
-        # Log the error and provide a fallback method
-        print(f"Error decoding header: {e}")
-        return val  # Return original value if it can't be properly decoded
+    return ''.join(header_parts)
 
 class ReadEmailsRequest(BaseModel):
     account: str
