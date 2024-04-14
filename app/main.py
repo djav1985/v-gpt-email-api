@@ -118,6 +118,9 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
                 print(f"Unexpected email_data structure: {email_data}")
                 continue
 
+            # Print the email_data here
+            print("Email Data:", email_data)
+
             envelope = envelope_bytes.decode('utf-8')
             envelope = imaplib.IMAP4_SSL.parse_fetch_response(envelope)['ENVELOPE']
             email_details = {
@@ -131,6 +134,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
