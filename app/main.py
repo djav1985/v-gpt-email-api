@@ -105,29 +105,18 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
 
         email_ids = data[0].split()[-request.limit:]  # Properly using request.limit
         emails = []
-        for e_id in email_ids:
-            status, email_data = mail.fetch(e_id, '(ENVELOPE)')
-            if status != 'OK':
-                continue
-
-            try:
-                if isinstance(email_data, tuple) and len(email_data) >= 2 and isinstance(email_data[0], bytes) and isinstance(email_data[1], tuple):
-                    envelope_bytes = email_data[1][0]  # Assuming the envelope data is in the first tuple element
-                elif isinstance(email_data, bytes):
-                    envelope_bytes = email_data
-                else:
-                    raise ValueError(f"Unexpected email_data structure: {type(email_data)}")
-            except Exception as e:
-                print(f"Error processing email {e_id}: {e}")
-                print(f"Email data structure: {type(email_data)}")  # Print data structure for further inspection
-                continue
-
-            envelope = envelope_bytes.decode('utf-8')
-            envelope = imaplib.IMAP4_SSL.parse_fetch_response(envelope)['ENVELOPE']
+        for email_data_bytes in email_ids:
+            email_data_str = email_data_bytes.decode('utf-8')
+            # Extracting email details from the string
+            email_parts = email_data_str.split('(ENVELOPE')[1].split('" "')
+            email_id = email_parts[0].strip().split(" ")[0]
+            sender = email_parts[1]
+            subject = email_parts[2]
+            # Creating email details dictionary
             email_details = {
-                "email_id": e_id.decode('utf-8'),
-                "sender": envelope.from_[0].mailbox + "@" + envelope.from_[0].host,
-                "subject": envelope.subject.decode('utf-8') if envelope.subject else "No Subject"
+                "email_id": email_id,
+                "sender": sender,
+                "subject": subject if subject else "No Subject"
             }
             emails.append(email_details)
 
@@ -135,6 +124,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
