@@ -219,7 +219,7 @@ def get_email_body(message):
 class MoveEmailsRequest(BaseModel):
     account: str
     folder: str
-    email_ids: str  # comma-separated list of email IDs
+    email_id: str  # Changed from str to List[str]
     target_folder: str
 
 @app.post("/move_emails", operation_id="move_emails")
@@ -233,19 +233,19 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
         mail.login(account_details['email'], account_details['password'])
         mail.select(request.folder)
 
-        email_id_string = ','.join(request.email_ids.split(','))  # Properly split and join email IDs
+        email_id = request.email_id  # Get the single email ID from the request
 
         status, _ = mail.select(request.target_folder)
         if status == 'NO':
             mail.create(request.target_folder)
             mail.subscribe(request.target_folder)
 
-        # Move emails to the target folder
-        result_status, move_data = mail.uid('MOVE', email_id_string, request.target_folder)
+        # Move the email to the target folder
+        result_status, move_data = mail.uid('MOVE', email_id, request.target_folder)
         if result_status != 'OK':
-            raise HTTPException(status_code=500, detail="Failed to move emails")
+            raise HTTPException(status_code=500, detail="Failed to move email")
 
-        response = {"status": "success", "detail": f"Emails moved to {request.target_folder}"}
+        response = {"status": "success", "detail": f"Email moved to {request.target_folder}"}
         print(response)  # Print the response before returning
         mail.logout()
         return response
