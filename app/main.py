@@ -143,25 +143,28 @@ def decode_header_value(val):
     if val is None:
         return None
 
-    # Add a charset for 'unknown-8bit' as 'utf-8' to handle unknown encodings
-    charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
+    # Decode the header using email's decode_header function
+    decoded_parts = decode_header(val)
 
-    # Decode headers while handling unknown charsets and errors
-    decoded = decode_header(val)
-    header_parts = []
-    for decoded_string, encoding in decoded:
-        if isinstance(decoded_string, bytes):
+    # Process each part of the decoded header
+    decoded_string = ""
+    for part, encoding in decoded_parts:
+        if isinstance(part, bytes):
             try:
-                # Decode with the specified charset or fall back to utf-8, replacing errors
-                decoded_string = decoded_string.decode(encoding or 'utf-8', errors='replace')
+                # Decode bytes to string using the specified encoding or utf-8
+                part = part.decode(encoding or 'utf-8', errors='replace')
             except UnicodeDecodeError:
-                # If utf-8 fails, force a decode ignoring errors to avoid crashing
-                decoded_string = decoded_string.decode('utf-8', errors='ignore')
-        # Use a regex to remove any surrogates or other non-UTF-8 compatible characters
-        decoded_string = re.sub(r'[\ud800-\udfff]', '', decoded_string)
-        header_parts.append(decoded_string)
+                # Fallback to utf-8 and ignore errors if decoding fails
+                part = part.decode('utf-8', errors='ignore')
 
-    return ''.join(header_parts)
+        # Sanitize the string by removing surrogates and other non-UTF-8 characters
+        part = re.sub(r'[\ud800-\udfff]', '', part)
+
+        # Append the sanitized part to the decoded string
+        decoded_string += part
+
+    # Return the sanitized and decoded string
+    return decoded_string
 
 class ReadEmailsRequest(BaseModel):
     account: str
