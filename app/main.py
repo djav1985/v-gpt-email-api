@@ -111,10 +111,12 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             email_id = email_data_str.split()[0].strip("b'")
             # Parsing the rest of the email data structure
             parts = email_data_str.split('" "')
-            sender_info = parts[2].strip('((').split()  # Extracting sender info
-            sender_name = sender_info[0]  # Extracting sender name
-            sender_email = sender_info[-1] + "@" + sender_info[-2]  # Extracting and including sender email with "@"
-            subject = parts[1] if len(parts) >= 2 else "No Subject"  # Extracting subject
+            # Extracting sender info
+            sender_info = parts[2].strip('((').split()[0]  # Extracting the first sender info
+            sender_name = sender_info.split('"')[1]  # Extracting sender name from the first pair of quotes
+            sender_email = f"{parts[2].split()[3]}@{parts[2].split()[5]}"  # Extracting sender email
+            # Extracting subject from between the pair of double quotes
+            subject = parts[1].strip('"')
             # Creating email details dictionary
             email_details = {
                 "email_id": email_id,
