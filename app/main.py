@@ -49,7 +49,7 @@ app = FastAPI(
 class ListFoldersRequest(BaseModel):
     account: str
 
-@app.post("/list_folders")
+@app.post("/list_folders", operation_id="list_folders")
 async def list_folders(request: ListFoldersRequest, api_key: str = Depends(get_api_key)) -> List[str]:
     print(f"Received request for account: {request.account}")  # Debug log
 
@@ -94,7 +94,7 @@ class ListEmailsRequest(BaseModel):
     folder: str
     limit: int
 
-@app.post("/list_emails")
+@app.post("/list_emails", operation_id="list_emails")
 async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
@@ -154,7 +154,7 @@ class ReadEmailsRequest(BaseModel):
     folder: str
     email_ids: str  # Expected to be a comma-separated list of email IDs
 
-@app.post("/read_emails")
+@app.post("/read_emails", operation_id="read_emails")
 async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
@@ -214,7 +214,7 @@ class MoveEmailsRequest(BaseModel):
     email_ids: str  # comma-separated list of email IDs
     target_folder: str
 
-@app.post("/move_emails")
+@app.post("/move_emails", operation_id="move_emails")
 async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
@@ -252,7 +252,7 @@ class SendEmailRequest(BaseModel):
     subject: str
     body: str
 
-@app.post("/send_email")
+@app.post("/send_email", operation_id="send_an_email")
 async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
@@ -286,7 +286,7 @@ class ReplyEmailRequest(BaseModel):
     email_id: str
     reply_body: str
 
-@app.post("/reply_email")
+@app.post("/reply_email", operation_id="reply_to_mail")
 async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
