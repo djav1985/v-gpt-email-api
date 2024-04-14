@@ -143,6 +143,9 @@ def decode_header_value(val):
     if val is None:
         return None
 
+    # Add a charset for 'unknown-8bit' as 'utf-8' to handle unknown encodings
+    charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
+
     # Decode headers while handling unknown charsets and errors
     decoded = decode_header(val)
     header_parts = []
