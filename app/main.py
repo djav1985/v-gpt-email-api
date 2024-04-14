@@ -141,23 +141,30 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
 def decode_header_value(val):
     if val is None:
         return None
+
+    # Register a default charset for unknown encodings to treat them as 'utf-8'
+    charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
+
     decoded = decode_header(val)
     header_parts = []
     for decoded_string, encoding in decoded:
         if isinstance(decoded_string, bytes):
+            # Specify fallback encoding in case of unknown encoding
+            fallback_encoding = 'utf-8'
+            if encoding is None or encoding == 'unknown-8bit':
+                encoding = fallback_encoding
+
             try:
-                # Try to decode with detected encoding or fall back to UTF-8.
-                text = decoded_string.decode(encoding or 'utf-8', errors='strict')
+                text = decoded_string.decode(encoding, errors='replace')
+            except LookupError:
+                # Fallback to 'utf-8' if the specified encoding is still unknown
+                text = decoded_string.decode(fallback_encoding, errors='replace')
             except UnicodeDecodeError:
-                # Handle undecodable bytes, skip surrogates
-                text = codecs.decode(decoded_string, 'utf-8', 'ignore')
-            except UnicodeEncodeError:
-                # Handle specific surrogate issues
-                text = codecs.decode(decoded_string, 'utf-8', 'replace')
-            header_parts.append(text)
+                # Handle any residual decode errors
+                text = decoded_string.decode(fallback_encoding, errors='ignore')
         else:
-            # Already decoded string
-            header_parts.append(decoded_string)
+            text = decoded_string
+        header_parts.append(text)
     return ''.join(header_parts)
 
 class ReadEmailsRequest(BaseModel):
