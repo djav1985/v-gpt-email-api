@@ -10,7 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.status import HTTP_403_FORBIDDEN
-from email import message_from_bytes, message_from_string
+from email import message_from_bytes, message_from_string, header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
@@ -86,7 +86,6 @@ def parse_folder_data(folder_data: str):
     folder_name = ' '.join(parts[2:])
     return flags, delimiter, folder_name.strip('"')
 
-
 class ListEmailsRequest(BaseModel):
     account: str
     folder: str
@@ -114,17 +113,14 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
                     continue  # Skip if email can't be fetched properly
 
                 email_msg = message_from_bytes(email_data[0][1])
-                subject = email_msg['Subject']
-                from_header = email_msg['From']
-                date_header = email_msg['Date']
-                print(f"Subject: {subject}, From: {from_header}, Date: {date_header}")
+                subject = decode_header_value(email_msg['Subject'])
+                from_header = decode_header_value(email_msg['From'])
+                date_header = decode_header_value(email_msg['Date'])
 
                 if email_msg.is_multipart():
                     body = ''.join(part.get_payload(decode=True).decode('utf-8') for part in email_msg.get_payload() if part.get_content_type() == 'text/plain')
                 else:
                     body = email_msg.get_payload(decode=True).decode('utf-8')
-
-                print("Email body (preview):", body[:50])  # Print first 50 characters of the body
 
                 emails.append({
                     "email_id": email_id.decode('utf-8').strip(),
@@ -137,6 +133,12 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def decode_header_value(val):
+    if val is None:
+        return None
+    decoded = header.decode_header(val)
+    return ''.join([str(t[0], t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0] for t in decoded])
 
 
 class ReadEmailsRequest(BaseModel):
