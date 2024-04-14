@@ -150,12 +150,8 @@ def decode_header_value(val):
     decoded_string = ""
     for part, encoding in decoded_parts:
         if isinstance(part, bytes):
-            try:
-                # Decode bytes to string using the specified encoding or utf-8
-                part = part.decode(encoding or 'utf-8', errors='replace')
-            except LookupError:
-                # Handle unknown encoding gracefully
-                part = part.decode('utf-8', errors='replace')
+            # Forcefully decode bytes to string using utf-8, ignoring errors
+            part = part.decode('utf-8', errors='ignore')
 
         # Sanitize the string by removing surrogates and other non-UTF-8 characters
         part = re.sub(r'[\ud800-\udfff]', '', part)
@@ -166,50 +162,49 @@ def decode_header_value(val):
     # Return the sanitized and decoded string
     return decoded_string
 
+# Read emails endpoint
 class ReadEmailsRequest(BaseModel):
     account: str
     folder: str
-    email_ids: str  # Expected to be a comma-separated list of email IDs
+    email_ids: List[str]
 
 @app.post("/read_emails", operation_id="read_emails")
-async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
+async def read_emails(request: ReadEmailsRequest) -> List[Dict[str, str]]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    try:
-        with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
+    with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
+        try:
             mail.login(account_details['email'], account_details['password'])
             mail.select(request.folder)
-
             emails = []
-            for e_id in request.email_ids.split(','):
-                e_id = e_id.strip()
-                if not e_id:
+            for email_id in request.email_ids:
+                try:
+                    status, email_data = mail.fetch(email_id, '(RFC822)')
+                    if status != 'OK':
+                        print(f"Failed to fetch email ID {email_id}: {status}")
+                        continue
+
+                    raw_email = email_data[0][1].decode('utf-8')
+                    message = message_from_bytes(raw_email)
+                    email_details = {
+                        "email_id": email_id,
+                        "sender": message['From'],
+                        "subject": message.get('Subject', "No Subject"),
+                        "date": message['Date'],
+                        "body": get_email_body(message)
+                    }
+                    emails.append(email_details)
+                except Exception as e:
+                    print(f"Error fetching email ID {email_id}: {e}")
                     continue
 
-                status, email_data = mail.fetch(e_id, '(RFC822)')
-                if status != 'OK':
-                    print(f"Failed to fetch email ID {e_id}: {status}")
-                    continue
-
-                raw_email = email_data[0][1].decode('utf-8')
-                message = message_from_string(raw_email)  # Use the imported function
-                email_details = {
-                    "email_id": e_id,
-                    "sender": message['From'],
-                    "subject": message.get('Subject', "No Subject"),
-                    "date": message['Date'],
-                    "body": get_email_body(message)
-                }
-                emails.append(email_details)
-
-            print(emails)  # This will print the emails list to the console
             return emails
-    except imaplib.IMAP4.error as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        except imaplib.IMAP4.error as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 def get_email_body(message):
     try:
