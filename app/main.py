@@ -133,6 +133,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 class ReadEmailsRequest(BaseModel):
     account: str
     folder: str
