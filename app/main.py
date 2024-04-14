@@ -17,13 +17,12 @@ from typing import List, Dict
 # Environment variables and basic configurations
 BASE_URL = os.getenv("BASE_URL", "http://localhost")
 API_KEY = os.getenv("API_KEY")
-accounts_json = os.getenv("ACCOUNTS")
-
-# Attempt to parse the accounts JSON, handle potential errors
+# Load the ACCOUNTS from environment variable and parse JSON
+accounts_json = os.getenv("ACCOUNTS", "[]")  # Default to an empty list if not set
 try:
     accounts = json.loads(accounts_json)
 except json.JSONDecodeError:
-    accounts = []  # Default to an empty list if there is an issue with the JSON format
+    raise Exception("Failed to decode ACCOUNTS from environment variable")
 
 bearer_scheme = HTTPBearer(auto_error=False)  # Avoid auto error to handle no Authorization header gracefully
 
@@ -46,7 +45,7 @@ class ListFoldersRequest(BaseModel):
 @app.post("/list_folders")
 async def list_folders(request: ListFoldersRequest, api_key: str = Depends(get_api_key)) -> List[str]:
     # Find the account details from the parsed accounts
-    account_details = next((acc for acc in accounts if acc['email'] == account), None)
+    account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -88,7 +87,7 @@ class ListEmailsRequest(BaseModel):
 @app.post("/list_emails")
 async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
     # Find the account details from the parsed accounts
-    account_details = next((acc for acc in accounts if acc['email'] == account), None)
+    account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -138,7 +137,7 @@ class ReadEmailsRequest(BaseModel):
 @app.post("/read_emails")
 async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
     # Find the account details from the parsed accounts
-    account_details = next((acc for acc in accounts if acc['email'] == account), None)
+    account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -202,7 +201,7 @@ class MoveEmailsRequest(BaseModel):
 @app.post("/move_emails")
 async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     # Find the account details from the parsed accounts
-    account_details = next((acc for acc in accounts if acc['email'] == account), None)
+    account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -246,7 +245,7 @@ class SendEmailRequest(BaseModel):
 @app.post("/send_email")
 async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     # Find the account details from the parsed accounts
-    account_details = next((acc for acc in accounts if acc['email'] == account), None)
+    account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -279,7 +278,7 @@ class ReplyEmailRequest(BaseModel):
 @app.post("/reply_email")
 async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     # Find the account details from the parsed accounts
-    account_details = next((acc for acc in accounts if acc['email'] == account), None)
+    account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
