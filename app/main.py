@@ -110,19 +110,25 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             if status != 'OK':
                 continue
 
-            envelope = email_data[0][1].decode('utf-8')
-            envelope = imaplib.IMAP4_SSL.parse_fetch_response(envelope)['ENVELOPE']
-            email_details = {
-                "email_id": e_id.decode('utf-8'),
-                "sender": envelope.from_[0].mailbox + "@" + envelope.from_[0].host,
-                "subject": envelope.subject.decode('utf-8') if envelope.subject else "No Subject"
-            }
-            emails.append(email_details)
+            # Check if email_data is a tuple and if the second element is a bytes object
+            if isinstance(email_data, tuple) and isinstance(email_data[0][1], bytes):
+                envelope = email_data[0][1].decode('utf-8')
+                envelope = imaplib.IMAP4_SSL.parse_fetch_response(envelope)['ENVELOPE']
+                email_details = {
+                    "email_id": e_id.decode('utf-8'),
+                    "sender": envelope.from_[0].mailbox + "@" + envelope.from_[0].host,
+                    "subject": envelope.subject.decode('utf-8') if envelope.subject else "No Subject"
+                }
+                emails.append(email_details)
+            else:
+                # Log the unexpected data structure for debugging
+                print(f"Unexpected email_data structure: {email_data}")
 
         mail.logout()
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
