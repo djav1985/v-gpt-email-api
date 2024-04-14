@@ -2,7 +2,7 @@ version: '3.8'
 services:
   app:
     container_name: gpt-email-api
-    image: vontainment/gpt-email-api:latest  # Use your appropriate image
+    image: vontainment/gpt-email-api:master  # Use your appropriate image
     hostname: gpt-email-api
     restart: unless-stopped
     network_mode: bridge
