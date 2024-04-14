@@ -142,28 +142,32 @@ def decode_header_value(val):
     if val is None:
         return None
 
-    # Register a default charset for unknown encodings to treat them as 'utf-8'
+    # Register a charset for 'unknown-8bit' that treats it as 'utf-8'
     charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
 
     decoded = decode_header(val)
     header_parts = []
     for decoded_string, encoding in decoded:
         if isinstance(decoded_string, bytes):
-            # Specify fallback encoding in case of unknown encoding
-            fallback_encoding = 'utf-8'
-            if encoding is None or encoding == 'unknown-8bit':
-                encoding = fallback_encoding
-
             try:
-                text = decoded_string.decode(encoding, errors='replace')
-            except LookupError:
-                # Fallback to 'utf-8' if the specified encoding is still unknown
-                text = decoded_string.decode(fallback_encoding, errors='replace')
+                # Attempt to decode with the detected or fallback encoding
+                text = decoded_string.decode(encoding or 'utf-8', errors='strict')
             except UnicodeDecodeError:
-                # Handle any residual decode errors
-                text = decoded_string.decode(fallback_encoding, errors='ignore')
+                # Handle any decode errors by replacing problematic characters
+                text = decoded_string.decode('utf-8', errors='replace')
+            except UnicodeEncodeError:
+                # Replace surrogates if present
+                text = decoded_string.decode('utf-8', errors='ignore')
         else:
             text = decoded_string
+
+        # Attempt to remove or replace surrogate characters
+        try:
+            # Python allows us to encode to utf-16 and decode back to remove surrogates
+            text = text.encode('utf-16', 'ignore').decode('utf-16')
+        except UnicodeEncodeError:
+            text = text.encode('utf-8', 'ignore').decode('utf-8')
+
         header_parts.append(text)
     return ''.join(header_parts)
 
