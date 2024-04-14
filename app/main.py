@@ -289,7 +289,6 @@ class ReplyEmailRequest(BaseModel):
 async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
-
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -297,8 +296,8 @@ async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api
         # Connect to the IMAP server to fetch the original email
         mail = imaplib.IMAP4_SSL(account_details['imap_server'])
         mail.login(account_details['email'], account_details['password'])
-        mail.select(folder)
-        result, data = mail.fetch(email_id, '(RFC822)')
+        mail.select(request.folder)  # Correctly reference the folder from request
+        result, data = mail.fetch(request.email_id, '(RFC822)')  # Correctly reference the email_id from request
         if result != 'OK':
             raise HTTPException(status_code=500, detail="Failed to fetch the original email")
 
@@ -315,7 +314,7 @@ async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api
         reply['Subject'] = 'RE: ' + original_subject
         reply['In-Reply-To'] = in_reply_to
         reply['References'] = in_reply_to
-        reply.attach(MIMEText(reply_body, 'plain'))
+        reply.attach(MIMEText(request.reply_body, 'plain'))  # Correctly reference the reply_body from request
 
         # Connect to the SMTP server to send the reply
         with smtplib.SMTP(account_details['smtp_server'], account_details['smtp_port']) as server:
