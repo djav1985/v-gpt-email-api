@@ -111,13 +111,16 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             email_id = email_data_str.split()[0].strip("b'")
             # Parsing the rest of the email data structure
             parts = email_data_str.split('" "')
-            sender = parts[-3]  # Extracting sender from the third-to-last part
-            subject = parts[1]  # Extracting subject from the second part
+            sender_info = parts[2].strip('((').split()  # Extracting sender info
+            sender_name = sender_info[0]  # Extracting sender name
+            sender_email = sender_info[-1] + "@" + sender_info[-2]  # Extracting and including sender email with "@"
+            subject = parts[1] if len(parts) >= 2 else "No Subject"  # Extracting subject
             # Creating email details dictionary
             email_details = {
                 "email_id": email_id,
-                "sender": sender,
-                "subject": subject if subject else "No Subject"
+                "sender_name": sender_name,
+                "sender_email": sender_email,
+                "subject": subject
             }
             emails.append(email_details)
 
@@ -125,7 +128,6 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 
