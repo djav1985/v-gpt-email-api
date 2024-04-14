@@ -142,8 +142,10 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
+class ReadEmailsRequest(BaseModel):
+    account: str
+    folder: str
+    email_ids: str  # Expected to be a comma-separated list of email IDs
 
 class ReadEmailsRequest(BaseModel):
     account: str
@@ -159,36 +161,35 @@ async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
-        # Connect to the IMAP server
-        mail = imaplib.IMAP4_SSL(account_details['imap_server'])
-        # Log in to the server
-        mail.login(account_details['email'], account_details['password'])
-        # Select the folder
-        mail.select(folder)
+        with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
+            mail.login(account_details['email'], account_details['password'])
+            mail.select(request.folder)  # Select the specified folder
 
-        # Fetch each email by ID
-        emails = []
-        for e_id in email_ids.split(','):
-            # Fetch specific email's envelope and body
-            status, email_data = mail.fetch(e_id, '(RFC822)')
-            if status != 'OK':
-                continue  # Skip if unable to fetch the email
+            # Fetch each specified email by ID
+            emails = []
+            for e_id in request.email_ids.split(','):
+                e_id = e_id.strip()
+                if not e_id:
+                    continue
 
-            # Parse email data
-            raw_email = email_data[0][1].decode('utf-8')
-            message = email.message_from_string(raw_email)
-            email_details = {
-                "email_id": e_id,
-                "sender": message['From'],
-                "subject": message.get('Subject', "No Subject"),
-                "body": get_email_body(message)
-            }
-            emails.append(email_details)
+                status, email_data = mail.fetch(e_id, '(RFC822)')
+                if status != 'OK':
+                    print(f"Failed to fetch email ID {e_id}: {status}")
+                    continue
 
-        # Logout from the mail server
-        mail.logout()
+                raw_email = email_data[0][1].decode('utf-8')
+                message = email.message_from_string(raw_email)
+                email_date = message['Date']  # Extracting the date from the email message
+                email_details = {
+                    "email_id": e_id,
+                    "sender": message['From'],
+                    "subject": message.get('Subject', "No Subject"),
+                    "date": email_date,  # Include the extracted date
+                    "body": get_email_body(message)
+                }
+                emails.append(email_details)
 
-        return emails
+            return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
@@ -201,11 +202,10 @@ def get_email_body(message):
             ctype = part.get_content_type()
             cdispo = str(part.get('Content-Disposition'))
 
-            # skip any text/plain (txt) attachments
             if ctype == 'text/plain' and 'attachment' not in cdispo:
-                return part.get_payload(decode=True).decode('utf-8')  # decode
+                return part.get_payload(decode=True).decode('utf-8')
             elif ctype == 'text/html':
-                return part.get_payload(decode=True).decode('utf-8')  # to convert byte code to string
+                return part.get_payload(decode=True).decode('utf-8')
     else:
         return message.get_payload(decode=True).decode('utf-8')
 
