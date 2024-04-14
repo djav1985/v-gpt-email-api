@@ -140,14 +140,23 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
 def decode_header_value(val):
     if val is None:
         return None
-    # Set a default charset for unknown encodings
+    # Register a default charset for unknown encodings to treat them as 'utf-8'
     charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
-    decoded = decode_header(val)
+
     try:
-        return ''.join([str(t[0], t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0] for t in decoded])
-    except LookupError:
-        # Fallback to utf-8 if the encoding is still unknown
-        return ''.join([t[0].decode('utf-8', errors='replace') if isinstance(t[0], bytes) else t[0] for t in decoded])
+        decoded = decode_header(val)
+        header_parts = []
+        for decoded_string, encoding in decoded:
+            if isinstance(decoded_string, bytes):
+                # Use a try-except block to handle undecodable bytes
+                try:
+                    decoded_string = decoded_string.decode(encoding or 'utf-8', errors='replace')
+                except UnicodeDecodeError:
+                    decoded_string = decoded_string.decode('utf-8', errors='replace')
+            header_parts.append(decoded_string)
+        return ''.join(header_parts)
+    except UnicodeEncodeError:
+        return val  # Return original value if it can't be decoded properly
 
 class ReadEmailsRequest(BaseModel):
     account: str
