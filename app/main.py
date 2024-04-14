@@ -117,12 +117,16 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             sender_email = f"{parts[2].split()[3]}@{parts[2].split()[5]}"  # Extracting sender email
             # Extracting subject from between the pair of double quotes
             subject = parts[1].strip('"')
+            # Converting date format
+            date_str = parts[0].strip('b"').split('"')[1]
+            date_formatted = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z').strftime('%a, %d %b %Y %I:%M:%S %p %z')
             # Creating email details dictionary
             email_details = {
                 "email_id": email_id,
                 "sender_name": sender_name,
                 "sender_email": sender_email,
-                "subject": subject
+                "subject": subject,
+                "date": date_formatted
             }
             emails.append(email_details)
 
