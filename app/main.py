@@ -4,6 +4,7 @@ import json
 import imaplib
 import smtplib
 from pydantic import BaseModel  # Data validation
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import FileResponse
@@ -89,6 +90,11 @@ class ListEmailsRequest(BaseModel):
     folder: str
     limit: int
 
+class ListEmailsRequest(BaseModel):
+    account: str
+    folder: str
+    limit: int
+
 @app.post("/list_emails")
 async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
@@ -96,43 +102,43 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
-        mail = imaplib.IMAP4_SSL(account_details['imap_server'])
-        mail.login(account_details['email'], account_details['password'])
-        mail.select(request.folder)
-        status, data = mail.search(None, 'ALL')
-        if status != 'OK':
-            raise HTTPException(status_code=500, detail="Failed to search emails")
+        with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
+            mail.login(account_details['email'], account_details['password'])
+            mail.select(request.folder)
+            status, data = mail.search(None, 'ALL')
+            if status != 'OK':
+                raise HTTPException(status_code=500, detail="Failed to search emails")
 
-        email_ids = data[0].split()[-request.limit:]  # Properly using request.limit
-        emails = []
-        for email_data_bytes in email_ids:
-            email_data_str = email_data_bytes.decode('utf-8')
-            envelope_index = email_data_str.find('ENVELOPE')
-            envelope_content = email_data_str[envelope_index:].split(')')[0]  # Extract content inside ENVELOPE
-            parts = envelope_content.split('"')
-            # Extracting sender info
-            sender_info_start = envelope_content.find('(("') + 2
-            sender_info_end = envelope_content.find('"))', sender_info_start)
-            sender_info = envelope_content[sender_info_start:sender_info_end].split()
-            sender_name = sender_info[0].strip('"')
-            sender_email = f"{sender_info[2].strip('""')}@{sender_info[4].strip('""')}"
-            # Extracting subject
-            subject = parts[3]
-            # Extracting date
-            date_str = parts[1]
-            date_formatted = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z').strftime('%a, %d %b %Y %I:%M:%S %p %z')
-            # Creating email details dictionary
-            email_details = {
-                "email_id": email_data_bytes.decode('utf-8').split()[0],
-                "sender_name": sender_name,
-                "sender_email": sender_email,
-                "subject": subject,
-                "date": date_formatted
-            }
-            emails.append(email_details)
+            email_ids = data[0].split()[-request.limit:]  # Ensuring only recent emails as per limit
+            emails = []
+            for email_id in email_ids:
+                typ, email_data = mail.fetch(email_id, '(RFC822)')
+                if typ != 'OK':
+                    continue  # Skip if email can't be fetched properly
 
-        mail.logout()
-        return emails
+                email_data_str = email_data[0][1].decode('utf-8')
+                envelope_index = email_data_str.find('ENVELOPE')
+                envelope_content = email_data_str[envelope_index:].split(')')[0]
+                parts = envelope_content.split('"')
+
+                sender_info = envelope_content.split('(("')[1].split('"))')[0].split()
+                sender_name = sender_info[0].strip('"')
+                sender_email = sender_info[2].strip('\"') + '@' + sender_info[3].strip('\"')
+
+                subject = parts[3]
+                date_str = parts[1]
+                date_formatted = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z').strftime('%a, %d %b %Y %I:%M:%S %p %z')
+
+                email_details = {
+                    "email_id": email_id.decode('utf-8').strip(),
+                    "sender_name": sender_name,
+                    "sender_email": sender_email,
+                    "subject": subject,
+                    "date": date_formatted
+                }
+                emails.append(email_details)
+
+            return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
 
