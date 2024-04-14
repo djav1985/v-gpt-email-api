@@ -184,10 +184,18 @@ async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api
         raise HTTPException(status_code=500, detail=str(e))
 
 def get_email_body(message):
-    if message.is_multipart():
-        return ''.join(part.get_payload(decode=True).decode('utf-8') for part in message.walk() if part.get_content_type() == 'text/plain')
-    else:
-        return message.get_payload(decode=True).decode('utf-8')
+    try:
+        if message.is_multipart():
+            for part in message.walk():
+                if part.get_content_type() == 'text/plain' and part.get('Content-Disposition') is None:
+                    return part.get_payload(decode=True).decode('utf-8')
+                elif part.get_content_type() == 'text/html':
+                    return part.get_payload(decode=True).decode('utf-8')
+        else:
+            return message.get_payload(decode=True).decode('utf-8')
+    except Exception as e:
+        print(f"Error decoding email body: {e}")
+        return "Error in decoding email body"
 
 class MoveEmailsRequest(BaseModel):
     account: str
