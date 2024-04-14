@@ -107,22 +107,23 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         emails = []
         for email_data_bytes in email_ids:
             email_data_str = email_data_bytes.decode('utf-8')
-            # Extracting email ID
-            email_id = email_data_str.split()[0].strip("b'")
-            # Parsing the rest of the email data structure
-            parts = email_data_str.split('" "')
+            envelope_index = email_data_str.find('ENVELOPE')
+            envelope_content = email_data_str[envelope_index:].split(')')[0]  # Extract content inside ENVELOPE
+            parts = envelope_content.split('"')
             # Extracting sender info
-            sender_info = parts[2].strip('((').split()[0]  # Extracting the first sender info
-            sender_name = sender_info.split('"')[1]  # Extracting sender name from the first pair of quotes
-            sender_email = f"{parts[2].split()[3]}@{parts[2].split()[5]}"  # Extracting sender email
-            # Extracting subject from between the pair of double quotes
-            subject = parts[1].strip('"')
-            # Converting date format
-            date_str = parts[0].strip('b"').split('"')[1]
+            sender_info_start = envelope_content.find('(("') + 2
+            sender_info_end = envelope_content.find('"))', sender_info_start)
+            sender_info = envelope_content[sender_info_start:sender_info_end].split()
+            sender_name = sender_info[0].strip('"')
+            sender_email = f"{sender_info[2].strip('""')}@{sender_info[4].strip('""')}"
+            # Extracting subject
+            subject = parts[3]
+            # Extracting date
+            date_str = parts[1]
             date_formatted = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z').strftime('%a, %d %b %Y %I:%M:%S %p %z')
             # Creating email details dictionary
             email_details = {
-                "email_id": email_id,
+                "email_id": email_data_bytes.decode('utf-8').split()[0],
                 "sender_name": sender_name,
                 "sender_email": sender_email,
                 "subject": subject,
@@ -134,6 +135,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
