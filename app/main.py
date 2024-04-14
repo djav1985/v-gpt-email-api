@@ -39,6 +39,8 @@ app = FastAPI(
     servers=[{"url": BASE_URL, "description": "Base API server"}]  # Server information
 )
 
+print(accounts)  # Check the content of the parsed accounts
+
 class ListFoldersRequest(BaseModel):
     account: str
 
