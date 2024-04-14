@@ -153,9 +153,9 @@ def decode_header_value(val):
             try:
                 # Decode bytes to string using the specified encoding or utf-8
                 part = part.decode(encoding or 'utf-8', errors='replace')
-            except UnicodeDecodeError:
-                # Fallback to utf-8 and ignore errors if decoding fails
-                part = part.decode('utf-8', errors='ignore')
+            except LookupError:
+                # Handle unknown encoding gracefully
+                part = part.decode('utf-8', errors='replace')
 
         # Sanitize the string by removing surrogates and other non-UTF-8 characters
         part = re.sub(r'[\ud800-\udfff]', '', part)
