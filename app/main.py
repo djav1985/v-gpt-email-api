@@ -90,11 +90,6 @@ class ListEmailsRequest(BaseModel):
     folder: str
     limit: int
 
-class ListEmailsRequest(BaseModel):
-    account: str
-    folder: str
-    limit: int
-
 @app.post("/list_emails")
 async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
@@ -110,24 +105,42 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
                 raise HTTPException(status_code=500, detail="Failed to search emails")
 
             email_ids = data[0].split()[-request.limit:]  # Ensuring only recent emails as per limit
+            print(f"Total emails fetched: {len(email_ids)}")
             emails = []
             for email_id in email_ids:
                 typ, email_data = mail.fetch(email_id, '(RFC822)')
                 if typ != 'OK':
+                    print("Failed to fetch email:", email_id)
                     continue  # Skip if email can't be fetched properly
 
                 email_data_str = email_data[0][1].decode('utf-8')
+                print("Email data:", email_data_str)
                 envelope_index = email_data_str.find('ENVELOPE')
                 envelope_content = email_data_str[envelope_index:].split(')')[0]
-                parts = envelope_content.split('"')
+                print("Envelope content:", envelope_content)
 
-                sender_info = envelope_content.split('(("')[1].split('"))')[0].split()
+                if 'ENVELOPE' not in envelope_content:
+                    continue
+
+                parts = envelope_content.split('"')
+                print("Parts after initial split:", parts)
+                if '(("' in envelope_content and '"))' in envelope_content:
+                    sender_info_segment = envelope_content.split('(("')[1].split('"))')[0]
+                    print("Sender info segment:", sender_info_segment)
+                else:
+                    print("No sender info found for email:", email_id)
+                    continue  # Skip if sender info cannot be reliably extracted
+
+                sender_info = sender_info_segment.split()
+                print("Sender info list:", sender_info)
                 sender_name = sender_info[0].strip('"')
                 sender_email = sender_info[2].strip('\"') + '@' + sender_info[3].strip('\"')
+                print("Extracted sender name:", sender_name, "and email:", sender_email)
 
                 subject = parts[3]
                 date_str = parts[1]
                 date_formatted = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z').strftime('%a, %d %b %Y %I:%M:%S %p %z')
+                print("Subject:", subject, "Date:", date_formatted)
 
                 email_details = {
                     "email_id": email_id.decode('utf-8').strip(),
