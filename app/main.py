@@ -168,7 +168,7 @@ class ReadEmailsRequest(BaseModel):
     folder: str
     email_id: str  # Changed from List[str] to str
 
-@app.post("/read_emails", operation_id="read_emails")
+@app.post("/read_emails", operation_id="read_email")
 async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
@@ -222,7 +222,7 @@ class MoveEmailsRequest(BaseModel):
     email_id: str  # Changed from str to List[str]
     target_folder: str
 
-@app.post("/move_emails", operation_id="move_emails")
+@app.post("/move_emails", operation_id="move_email")
 async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
