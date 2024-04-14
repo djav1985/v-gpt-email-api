@@ -91,33 +91,24 @@ class ListEmailsRequest(BaseModel):
 
 @app.post("/list_emails")
 async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
-    # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
-
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
-        # Connect to the IMAP server
         mail = imaplib.IMAP4_SSL(account_details['imap_server'])
-        # Log in to the server
         mail.login(account_details['email'], account_details['password'])
-        # Select the folder from the request
-        mail.select(request.folder)  # Here is where you need to use request.folder
-
-        # Search for all emails in the selected folder
+        mail.select(request.folder)
         status, data = mail.search(None, 'ALL')
         if status != 'OK':
             raise HTTPException(status_code=500, detail="Failed to search emails")
 
-        # Fetch emails up to the specified limit
-        email_ids = data[0].split()[-request.limit:]  # Get the last 'limit' emails using request.limit
+        email_ids = data[0].split()[-request.limit:]  # Properly using request.limit
         emails = []
         for e_id in email_ids:
-            # Fetch each email's envelope to get sender and subject
             status, email_data = mail.fetch(e_id, '(ENVELOPE)')
             if status != 'OK':
-                continue  # Skip if unable to fetch the email
+                continue
 
             envelope = email_data[0][1].decode('utf-8')
             envelope = imaplib.IMAP4_SSL.parse_fetch_response(envelope)['ENVELOPE']
@@ -128,12 +119,11 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             }
             emails.append(email_details)
 
-        # Logout from the mail server
         mail.logout()
-
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 class ReadEmailsRequest(BaseModel):
@@ -208,42 +198,33 @@ class MoveEmailsRequest(BaseModel):
 
 @app.post("/move_emails")
 async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
-    # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
-
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
-        # Connect to the IMAP server
         mail = imaplib.IMAP4_SSL(account_details['imap_server'])
-        # Log in to the server
         mail.login(account_details['email'], account_details['password'])
-        # Select the source folder
-        mail.select(folder)
+        mail.select(request.folder)
 
-        # Prepare email IDs for IMAP format
-        email_id_string = ','.join(ids_list)
+        email_id_string = ','.join(request.email_ids.split(','))  # Properly split and join email IDs
 
-        # Check if the target folder exists or create it
-        status, _ = mail.select(target_folder)
+        status, _ = mail.select(request.target_folder)
         if status == 'NO':
-            mail.create(target_folder)
-            mail.subscribe(target_folder)  # Optional: Subscribe to the folder
+            mail.create(request.target_folder)
+            mail.subscribe(request.target_folder)
 
-        # Attempt to move emails to the target folder
-        result_status, move_data = mail.uid('MOVE', email_id_string, target_folder)
+        result_status, move_data = mail.uid('MOVE', email_id_string, request.target_folder)
         if result_status != 'OK':
             raise HTTPException(status_code=500, detail="Failed to move emails")
 
-        # Logout from the mail server
         mail.logout()
-
-        return {"status": "success", "detail": f"Emails moved to {target_folder}"}
+        return {"status": "success", "detail": f"Emails moved to {request.target_folder}"}
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as general_error:
         raise HTTPException(status_code=500, detail=str(general_error))
+
 
 class SendEmailRequest(BaseModel):
     account: str
