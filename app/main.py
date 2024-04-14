@@ -3,6 +3,7 @@ import os
 import json
 import imaplib
 import smtplib
+import email
 from pydantic import BaseModel  # Data validation
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Security
@@ -279,6 +280,9 @@ async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_k
     except Exception as general_error:
         raise HTTPException(status_code=500, detail=str(general_error))
 
+
+Request failed with status code 500 and {"detail":"name 'email' is not defined"}
+also print out the apis retuns
 class ReplyEmailRequest(BaseModel):
     account: str
     folder: str
