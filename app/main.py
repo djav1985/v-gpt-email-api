@@ -1,6 +1,7 @@
 # Importing necessary modules and libraries
 import os
 import json
+import re
 import imaplib
 import smtplib
 import email
@@ -142,7 +143,7 @@ def decode_header_value(val):
     if val is None:
         return None
 
-    # Register a charset for 'unknown-8bit' that treats it as 'utf-8'
+    # Add a charset for 'unknown-8bit' as 'utf-8' to handle unknown encodings
     charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
 
     decoded = decode_header(val)
@@ -150,25 +151,19 @@ def decode_header_value(val):
     for decoded_string, encoding in decoded:
         if isinstance(decoded_string, bytes):
             try:
-                # Attempt to decode with the detected or fallback encoding
-                text = decoded_string.decode(encoding or 'utf-8', errors='strict')
+                # Decode with detected or fallback encoding, replace errors
+                text = decoded_string.decode(encoding or 'utf-8', errors='replace')
             except UnicodeDecodeError:
-                # Handle any decode errors by replacing problematic characters
+                # If decode fails, replace problematic characters
                 text = decoded_string.decode('utf-8', errors='replace')
-            except UnicodeEncodeError:
-                # Replace surrogates if present
-                text = decoded_string.decode('utf-8', errors='ignore')
         else:
             text = decoded_string
 
-        # Attempt to remove or replace surrogate characters
-        try:
-            # Python allows us to encode to utf-16 and decode back to remove surrogates
-            text = text.encode('utf-16', 'ignore').decode('utf-16')
-        except UnicodeEncodeError:
-            text = text.encode('utf-8', 'ignore').decode('utf-8')
+        # Sanitize the text to remove any surrogates using regex
+        text = re.sub(r'[\ud800-\udfff]', '', text)
 
         header_parts.append(text)
+
     return ''.join(header_parts)
 
 class ReadEmailsRequest(BaseModel):
