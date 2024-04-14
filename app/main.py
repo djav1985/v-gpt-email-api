@@ -13,8 +13,10 @@ from starlette.status import HTTP_403_FORBIDDEN
 from email import message_from_bytes, message_from_string, header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.header import Header
+from email.header import Header, decode_header
+import email.charset as charset
 from typing import List, Dict
+
 
 # Environment variables and basic configurations
 BASE_URL = os.getenv("BASE_URL", "http://localhost")
@@ -137,9 +139,14 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
 def decode_header_value(val):
     if val is None:
         return None
-    decoded = header.decode_header(val)
-    return ''.join([str(t[0], t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0] for t in decoded])
-
+    # Set a default charset for unknown encodings
+    charset.add_charset('unknown-8bit', charset.SHORTEST, charset.QP, 'utf-8')
+    decoded = decode_header(val)
+    try:
+        return ''.join([str(t[0], t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0] for t in decoded])
+    except LookupError:
+        # Fallback to utf-8 if the encoding is still unknown
+        return ''.join([t[0].decode('utf-8', errors='replace') if isinstance(t[0], bytes) else t[0] for t in decoded])
 
 class ReadEmailsRequest(BaseModel):
     account: str
