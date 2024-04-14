@@ -177,6 +177,7 @@ async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api
                 }
                 emails.append(email_details)
 
+            print(emails)  # This will print the emails list to the console
             return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -221,17 +222,19 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
             mail.create(request.target_folder)
             mail.subscribe(request.target_folder)
 
+        # Move emails to the target folder
         result_status, move_data = mail.uid('MOVE', email_id_string, request.target_folder)
         if result_status != 'OK':
             raise HTTPException(status_code=500, detail="Failed to move emails")
 
+        response = {"status": "success", "detail": f"Emails moved to {request.target_folder}"}
+        print(response)  # Print the response before returning
         mail.logout()
-        return {"status": "success", "detail": f"Emails moved to {request.target_folder}"}
+        return response
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as general_error:
         raise HTTPException(status_code=500, detail=str(general_error))
-
 
 class SendEmailRequest(BaseModel):
     account: str
@@ -241,9 +244,7 @@ class SendEmailRequest(BaseModel):
 
 @app.post("/send_email")
 async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
-    # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
-
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
@@ -251,17 +252,19 @@ async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_k
         # Create MIME message
         message = MIMEMultipart()
         message["From"] = account_details['email']
-        message["To"] = to_address
-        message["Subject"] = subject
-        message.attach(MIMEText(body, "plain"))
+        message["To"] = request.to_address
+        message["Subject"] = request.subject
+        message.attach(MIMEText(request.body, "plain"))
 
         # Connect to the SMTP server
         with smtplib.SMTP(account_details['smtp_server'], account_details['smtp_port']) as server:
             server.starttls()  # Can be changed to SMTP_SSL if using SSL from the start
             server.login(account_details['email'], account_details['password'])
-            server.sendmail(account_details['email'], to_address, message.as_string())
+            server.sendmail(account_details['email'], request.to_address, message.as_string())
 
-        return {"status": "success", "detail": "Email sent successfully to {}".format(to_address)}
+        response = {"status": "success", "detail": f"Email sent successfully to {request.to_address}"}
+        print(response)  # Print the response for debugging
+        return response
     except smtplib.SMTPException as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as general_error:
