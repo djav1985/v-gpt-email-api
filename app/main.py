@@ -10,7 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.status import HTTP_403_FORBIDDEN
-from email import message_from_bytes
+from email import message_from_bytes, message_from_string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
@@ -86,10 +86,6 @@ def parse_folder_data(folder_data: str):
     folder_name = ' '.join(parts[2:])
     return flags, delimiter, folder_name.strip('"')
 
-class ListEmailsRequest(BaseModel):
-    account: str
-    folder: str
-    limit: int
 
 class ListEmailsRequest(BaseModel):
     account: str
@@ -142,10 +138,6 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-class ReadEmailsRequest(BaseModel):
-    account: str
-    folder: str
-    email_ids: str  # Expected to be a comma-separated list of email IDs
 
 class ReadEmailsRequest(BaseModel):
     account: str
@@ -154,18 +146,15 @@ class ReadEmailsRequest(BaseModel):
 
 @app.post("/read_emails")
 async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api_key)) -> List[Dict[str, str]]:
-    # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
-
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
         with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
             mail.login(account_details['email'], account_details['password'])
-            mail.select(request.folder)  # Select the specified folder
+            mail.select(request.folder)
 
-            # Fetch each specified email by ID
             emails = []
             for e_id in request.email_ids.split(','):
                 e_id = e_id.strip()
@@ -178,13 +167,12 @@ async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api
                     continue
 
                 raw_email = email_data[0][1].decode('utf-8')
-                message = email.message_from_string(raw_email)
-                email_date = message['Date']  # Extracting the date from the email message
+                message = message_from_string(raw_email)  # Use the imported function
                 email_details = {
                     "email_id": e_id,
                     "sender": message['From'],
                     "subject": message.get('Subject', "No Subject"),
-                    "date": email_date,  # Include the extracted date
+                    "date": message['Date'],
                     "body": get_email_body(message)
                 }
                 emails.append(email_details)
@@ -196,16 +184,8 @@ async def read_emails(request: ReadEmailsRequest, api_key: str = Depends(get_api
         raise HTTPException(status_code=500, detail=str(e))
 
 def get_email_body(message):
-    """Utility function to extract the body from an email message object."""
     if message.is_multipart():
-        for part in message.walk():
-            ctype = part.get_content_type()
-            cdispo = str(part.get('Content-Disposition'))
-
-            if ctype == 'text/plain' and 'attachment' not in cdispo:
-                return part.get_payload(decode=True).decode('utf-8')
-            elif ctype == 'text/html':
-                return part.get_payload(decode=True).decode('utf-8')
+        return ''.join(part.get_payload(decode=True).decode('utf-8') for part in message.walk() if part.get_content_type() == 'text/plain')
     else:
         return message.get_payload(decode=True).decode('utf-8')
 
