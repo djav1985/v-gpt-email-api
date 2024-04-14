@@ -102,8 +102,8 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         mail = imaplib.IMAP4_SSL(account_details['imap_server'])
         # Log in to the server
         mail.login(account_details['email'], account_details['password'])
-        # Select the folder
-        mail.select(folder)
+        # Select the folder from the request
+        mail.select(request.folder)  # Here is where you need to use request.folder
 
         # Search for all emails in the selected folder
         status, data = mail.search(None, 'ALL')
@@ -111,7 +111,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
             raise HTTPException(status_code=500, detail="Failed to search emails")
 
         # Fetch emails up to the specified limit
-        email_ids = data[0].split()[-limit:]  # Get the last 'limit' emails
+        email_ids = data[0].split()[-request.limit:]  # Get the last 'limit' emails using request.limit
         emails = []
         for e_id in email_ids:
             # Fetch each email's envelope to get sender and subject
@@ -134,6 +134,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         return emails
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 class ReadEmailsRequest(BaseModel):
     account: str
