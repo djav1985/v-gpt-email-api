@@ -181,7 +181,7 @@ async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
 
             email_id = request.email_id  # Get the single email ID from the request
             try:
-                status, email_data = mail.fetch(email_id, '(RFC822)')
+                status, email_data = mail.fetch(request.email_id, '(RFC822)')
                 if status != 'OK':
                     raise HTTPException(status_code=404, detail=f"Failed to fetch email ID {email_id}: {status}")
 
@@ -294,7 +294,7 @@ class ReplyEmailRequest(BaseModel):
     email_id: str
     reply_body: str
 
-@app.post("/reply_email", operation_id="reply_to_mail")
+@app.post("/reply_email", operation_id="reply_to_email")
 async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
