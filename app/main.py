@@ -280,7 +280,6 @@ async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_k
     except Exception as general_error:
         raise HTTPException(status_code=500, detail=str(general_error))
 
-
 class ReplyEmailRequest(BaseModel):
     account: str
     folder: str
@@ -289,6 +288,7 @@ class ReplyEmailRequest(BaseModel):
 
 @app.post("/reply_email")
 async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
+    # Find the account details from the parsed accounts
     account_details = next((acc for acc in accounts if acc['email'] == request.account), None)
     if not account_details:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -296,12 +296,12 @@ async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api
     try:
         mail = imaplib.IMAP4_SSL(account_details['imap_server'])
         mail.login(account_details['email'], account_details['password'])
-        mail.select(request.folder)
-        result, data = mail.fetch(request.email_id, '(RFC822)')
+        mail.select(request.folder)  # Correctly reference the folder from request
+        result, data = mail.fetch(request.email_id, '(RFC822)')  # Correctly reference the email_id from request
         if result != 'OK':
             raise HTTPException(status_code=500, detail="Failed to fetch the original email")
 
-        original_email = email.message_from_bytes(data[0][1])
+        original_email = message_from_bytes(data[0][1])
         original_sender = original_email['From']
         original_subject = original_email['Subject']
         in_reply_to = original_email.get('Message-ID', '')
