@@ -24,6 +24,8 @@ try:
 except json.JSONDecodeError:
     raise Exception("Failed to decode ACCOUNTS from environment variable")
 
+print("Loaded accounts:", accounts)  # Debugging statement to check the content of parsed accounts
+
 bearer_scheme = HTTPBearer(auto_error=False)  # Avoid auto error to handle no Authorization header gracefully
 
 async def get_api_key(credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)):
@@ -38,8 +40,6 @@ app = FastAPI(
     description="A FastAPI application that manages email accounts",  # API description
     servers=[{"url": BASE_URL, "description": "Base API server"}]  # Server information
 )
-
-print(accounts)  # Check the content of the parsed accounts
 
 class ListFoldersRequest(BaseModel):
     account: str
