@@ -6,7 +6,8 @@ import smtplib
 from datetime import datetime
 
 # Importing from third-party libraries
-from fastapi import FastAPI, HTTPException, Depends, Security, FileResponse
+from fastapi import FastAPI, HTTPException, Depends, Security
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
