@@ -168,36 +168,20 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
             mail.select(request.folder)
 
             target_folder = "Trash" if request.action == "trash" else "Spam"
-            print(f"Targeting folder: {target_folder}")
+            print(f"Moving email UID {request.email_id} to {target_folder}...")
 
-            # Ensure the target folder exists and is selected
-            status, _ = mail.select(target_folder)
-            if status == 'NO':
-                mail.create(target_folder)
-                mail.subscribe(target_folder)
-                mail.select(target_folder)  # Confirm selection
-
-            # Copy and mark as deleted
-            result_status, copy_data = mail.uid('COPY', request.email_id, target_folder)
+            # Moving the email directly to the target folder
+            result_status, move_data = mail.uid('MOVE', request.email_id, target_folder)
             if result_status != 'OK':
-                print(f"Copy failed: {copy_data}")
-                raise HTTPException(status_code=500, detail="Failed to copy email")
+                print(f"Move failed: {move_data}")
+                raise HTTPException(status_code=500, detail=f"Failed to move email to {target_folder}")
 
-            result_status, delete_data = mail.uid('STORE', request.email_id, '+FLAGS', '\\Deleted')
-            if result_status != 'OK':
-                print(f"Delete failed: {delete_data}")
-                raise HTTPException(status_code=500, detail="Failed to mark email as deleted")
-
-            mail.expunge()
-
-            print("Email processed successfully.")
+            print("Email moved successfully.")
             return {"status": "success", "detail": f"Email moved to {target_folder} successfully"}
 
     except imaplib.IMAP4.error as e:
-        print(f"IMAP4 Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"IMAP4 Error: {e}")
     except Exception as general_error:
-        print(f"General Error: {general_error}")
         raise HTTPException(status_code=500, detail=str(general_error))
 
 @app.post("/send_email", operation_id="send_an_email")
