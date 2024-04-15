@@ -165,36 +165,39 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
     try:
         with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
             mail.login(account_details['email'], account_details['password'])
-            mail.select(request.folder)  # Ensure you're working within the correct folder context
+            mail.select(request.folder)
 
             target_folder = "Trash" if request.action == "trash" else "Spam"
+            print(f"Targeting folder: {target_folder}")
 
-            # Ensure the target folder exists, create if not
+            # Ensure the target folder exists and is selected
             status, _ = mail.select(target_folder)
             if status == 'NO':
                 mail.create(target_folder)
                 mail.subscribe(target_folder)
+                mail.select(target_folder)  # Confirm selection
 
-            # Simulate moving the email by copying to the target folder then deleting from the original
+            # Copy and mark as deleted
             result_status, copy_data = mail.uid('COPY', request.email_id, target_folder)
             if result_status != 'OK':
-                raise HTTPException(status_code=500, detail=f"Failed to copy email to {target_folder}")
+                print(f"Copy failed: {copy_data}")
+                raise HTTPException(status_code=500, detail="Failed to copy email")
 
-            # Flag the original email as deleted
             result_status, delete_data = mail.uid('STORE', request.email_id, '+FLAGS', '\\Deleted')
             if result_status != 'OK':
+                print(f"Delete failed: {delete_data}")
                 raise HTTPException(status_code=500, detail="Failed to mark email as deleted")
 
-            # Expunge to permanently remove the email
             mail.expunge()
 
-            response = {"status": "success", "detail": f"Email moved to {target_folder} successfully"}
-            print(response)
-            return response
+            print("Email processed successfully.")
+            return {"status": "success", "detail": f"Email moved to {target_folder} successfully"}
 
     except imaplib.IMAP4.error as e:
+        print(f"IMAP4 Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as general_error:
+        print(f"General Error: {general_error}")
         raise HTTPException(status_code=500, detail=str(general_error))
 
 @app.post("/send_email", operation_id="send_an_email")
