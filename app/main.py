@@ -17,7 +17,7 @@ from email.mime.multipart import MIMEMultipart
 from starlette.status import HTTP_403_FORBIDDEN
 
 # Importing local modules
-from .functions import get_account_details, send_email_utility, fetch_email, get_email_body, load_configuration, decode_header_value
+from app.functions import get_account_details, send_email_utility, fetch_email, get_email_body, load_configuration, decode_header_value
 
 # Load configuration on startup
 BASE_URL, API_KEY, accounts = load_configuration()
