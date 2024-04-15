@@ -106,14 +106,17 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
         with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
             mail.login(account_details['email'], account_details['password'])
             mail.select(request.folder)
-            status, data = mail.search(None, 'ALL')
+            # Retrieve UIDs
+            status, data = mail.uid('search', None, 'ALL')
             if status != 'OK':
                 raise HTTPException(status_code=500, detail="Failed to search emails")
 
-            email_ids = data[0].split()[-request.limit:]  # Ensuring only recent emails as per limit
+            # Ensuring only recent emails as per limit
+            email_ids = data[0].split()[-request.limit:]  
             emails = []
             for email_id in email_ids:
-                typ, email_data = mail.fetch(email_id, '(RFC822)')
+                # Fetch each email by UID
+                typ, email_data = mail.uid('fetch', email_id, '(RFC822)')
                 if typ != 'OK':
                     continue  # Skip if email can't be fetched properly
 
@@ -123,16 +126,16 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
                 date_header = decode_header_value(email_msg['Date'])
 
                 if email_msg.is_multipart():
-                    body = ''.join(part.get_payload(decode=True).decode('utf-8') for part in email_msg.get_payload() if part.get_content_type() == 'text/plain')
+                    body = ''.join(part.get_payload(decode=True).decode('utf-8') for part in email_msg.get_payload() if part.get_content_type == 'text/plain')
                 else:
                     body = email_msg.get_payload(decode=True).decode('utf-8')
 
                 emails.append({
-                    "email_id": email_id.decode('utf-8').strip(),
+                    "email_id": email_id.decode('utf-8').strip(),  # Correctly refers to the UID
                     "subject": subject,
                     "from": from_header,
                     "date": date_header,
-                    "body_preview": body[:50]
+                    "body_preview": body[:50]  # Showing a preview of the body
                 })
 
             return emails
