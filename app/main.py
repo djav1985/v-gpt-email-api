@@ -159,7 +159,6 @@ async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
     }
 
 @app.post("/move_emails", operation_id="move_email")
-@app.post("/move_emails", operation_id="move_email")
 async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     account_details = get_account_details(request.account, accounts)
 
