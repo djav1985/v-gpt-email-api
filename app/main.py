@@ -165,18 +165,21 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
     try:
         with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
             mail.login(account_details['email'], account_details['password'])
+
+            # Check server capabilities
+            capabilities = mail.capabilities
+            if 'MOVE' not in capabilities:
+                raise HTTPException(status_code=500, detail="MOVE command not supported by the server")
+
             mail.select(request.folder)
-
             target_folder = "Trash" if request.action == "trash" else "Spam"
-            print(f"Moving email UID {request.email_id} to {target_folder}...")
 
-            # Moving the email directly to the target folder
+            # Attempt to move the email
             result_status, move_data = mail.uid('MOVE', request.email_id, target_folder)
             if result_status != 'OK':
-                print(f"Move failed: {move_data}")
-                raise HTTPException(status_code=500, detail=f"Failed to move email to {target_folder}")
+                error_detail = move_data[0].decode('utf-8') if move_data and isinstance(move_data[0], bytes) else str(move_data)
+                raise HTTPException(status_code=500, detail=f"Failed to move email to {target_folder}: {error_detail}")
 
-            print("Email moved successfully.")
             return {"status": "success", "detail": f"Email moved to {target_folder} successfully"}
 
     except imaplib.IMAP4.error as e:
