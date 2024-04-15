@@ -60,8 +60,8 @@ class ReadEmailsRequest(BaseModel):
 class MoveEmailsRequest(BaseModel):
     account: str
     folder: str
-    email_id: str  # Changed from str to List[str]
-    target_folder: str
+    email_id: str
+    action: str  # 'trash' or 'spam'
 
 class SendEmailRequest(BaseModel):
     account: str
@@ -112,7 +112,7 @@ async def list_emails(request: ListEmailsRequest, api_key: str = Depends(get_api
                 raise HTTPException(status_code=500, detail="Failed to search emails")
 
             # Ensuring only recent emails as per limit
-            email_ids = data[0].split()[-request.limit:]  
+            email_ids = data[0].split()[-request.limit:]
             emails = []
             for email_id in email_ids:
                 # Fetch each email by UID
@@ -165,22 +165,31 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
     try:
         with imaplib.IMAP4_SSL(account_details['imap_server']) as mail:
             mail.login(account_details['email'], account_details['password'])
-            mail.select(request.folder)
+            mail.select(request.folder)  # Ensure you're working within the correct folder context
 
-            # Check if target folder exists, create if not
-            status, _ = mail.select(request.target_folder)
+            target_folder = "Trash" if request.action == "trash" else "Spam"
+
+            # Ensure the target folder exists, create if not
+            status, _ = mail.select(target_folder)
             if status == 'NO':
-                mail.create(request.target_folder)
-                mail.subscribe(request.target_folder)
-                mail.select(request.target_folder)  # Re-select the target folder to ensure it's properly initialized
+                mail.create(target_folder)
+                mail.subscribe(target_folder)
 
-            # Attempt to move the email to the target folder using UID
-            result_status, move_data = mail.uid('MOVE', request.email_id, 'Spam')
-            print(f"MOVE Command Response: {result_status}, {move_data}")
+            # Simulate moving the email by copying to the target folder then deleting from the original
+            result_status, copy_data = mail.uid('COPY', request.email_id, target_folder)
             if result_status != 'OK':
-               raise HTTPException(status_code=500, detail=f"Failed to move email: {move_data[0].decode('utf-8')}")
+                raise HTTPException(status_code=500, detail=f"Failed to copy email to {target_folder}")
 
-            response = {"status": "success", "detail": f"Email moved to {request.target_folder}"}
+            # Flag the original email as deleted
+            result_status, delete_data = mail.uid('STORE', request.email_id, '+FLAGS', '(\\Deleted)')
+            if result_status != 'OK':
+                raise HTTPException(status_code=500, detail="Failed to mark email as deleted")
+
+            # Expunge to permanently remove the email
+            mail.expunge()
+
+            response = {"status": "success", "detail": f"Email moved to {target_folder} successfully"}
+            print(response)
             return response
 
     except imaplib.IMAP4.error as e:
