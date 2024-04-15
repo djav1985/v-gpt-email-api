@@ -20,9 +20,6 @@ def send_email_utility(account_details, to_address, email_message):
     except smtplib.SMTPException as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-        import imaplib
-from fastapi import HTTPException
-
 def fetch_email(account_details, folder, email_id):
     try:
         mail = imaplib.IMAP4_SSL(account_details['imap_server'])
