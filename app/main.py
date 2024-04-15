@@ -175,10 +175,10 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
                 mail.select(request.target_folder)  # Re-select the target folder to ensure it's properly initialized
 
             # Attempt to move the email to the target folder using UID
-            result_status, move_data = mail.uid('MOVE', request.email_id, request.target_folder)
+            result_status, move_data = mail.uid('MOVE', request.email_id, 'Spam')
+            print(f"MOVE Command Response: {result_status}, {move_data}")
             if result_status != 'OK':
-                print(f"Move failed with message: {move_data}")  # Debugging output
-                raise HTTPException(status_code=500, detail="Failed to move email")
+               raise HTTPException(status_code=500, detail=f"Failed to move email: {move_data[0].decode('utf-8')}")
 
             response = {"status": "success", "detail": f"Email moved to {request.target_folder}"}
             return response
