@@ -181,7 +181,7 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
                 raise HTTPException(status_code=500, detail=f"Failed to copy email to {target_folder}")
 
             # Flag the original email as deleted
-            result_status, delete_data = mail.uid('STORE', request.email_id, '+FLAGS', '(\\Deleted)')
+            result_status, delete_data = mail.uid('STORE', request.email_id, '+FLAGS', '\\Deleted')
             if result_status != 'OK':
                 raise HTTPException(status_code=500, detail="Failed to mark email as deleted")
 
