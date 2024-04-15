@@ -185,19 +185,18 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
 async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     account_details = get_account_details(request.account, accounts)
 
-    try:
-        # Create MIME message
-        message = MIMEMultipart()
-        message["From"] = account_details['email']
-        message["To"] = request.to_address
-        message["Subject"] = request.subject
-        message.attach(MIMEText(request.body, "plain"))
+    # Create MIME message
+    message = MIMEMultipart()
+    message["From"] = account_details['email']
+    message["To"] = request.to_address
+    message["Subject"] = request.subject
+    message.attach(MIMEText(request.body, "plain"))
 
-        send_email_utility(account_details, request.to_address, message)
+    send_email_utility(account_details, request.to_address, message)
 
-        response = {"status": "success", "detail": f"Email sent successfully to {request.to_address}"}
-        print(response)
-        return response
+    response = {"status": "success", "detail": f"Email sent successfully to {request.to_address}"}
+    print(response)
+    return response
 
 @app.post("/reply_email", operation_id="reply_to_email")
 async def reply_email(request: ReplyEmailRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
