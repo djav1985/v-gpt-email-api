@@ -3,7 +3,6 @@ import os
 import json
 import imaplib
 import smtplib
-from datetime import datetime
 
 # Importing from third-party libraries
 from fastapi import FastAPI, HTTPException, Depends, Security
@@ -11,6 +10,8 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Dict
 from email import message_from_bytes
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
