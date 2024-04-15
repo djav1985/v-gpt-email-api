@@ -26,11 +26,12 @@ def send_email_utility(account_details, to_address, email_message):
         raise HTTPException(status_code=500, detail=str(e))
 
 def fetch_email(account_details, folder, email_id):
+    mail = imaplib.IMAP4_SSL(account_details['imap_server'])
     try:
-        mail = imaplib.IMAP4_SSL(account_details['imap_server'])
         mail.login(account_details['email'], account_details['password'])
         mail.select(folder)  # Access the specified folder
-        result, data = mail.fetch(email_id, '(RFC822)')  # Fetch the specified email
+        # Fetch the specified email using UID
+        result, data = mail.uid('fetch', email_id, '(RFC822)')
         if result != 'OK':
             raise HTTPException(status_code=500, detail="Failed to fetch the original email")
         return data
