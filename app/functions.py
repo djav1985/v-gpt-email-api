@@ -5,6 +5,9 @@ import imaplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from fastapi import HTTPException
+from email import message_from_bytes
+from email.header import decode_header
+import re
 
 def get_account_details(email: str, accounts):
     account_details = next((acc for acc in accounts if acc['email'] == email), None)
