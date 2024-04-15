@@ -159,6 +159,7 @@ async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
     }
 
 @app.post("/move_emails", operation_id="move_email")
+@app.post("/move_emails", operation_id="move_email")
 async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api_key)) -> Dict[str, str]:
     account_details = get_account_details(request.account, accounts)
 
@@ -172,15 +173,17 @@ async def move_emails(request: MoveEmailsRequest, api_key: str = Depends(get_api
             if status == 'NO':
                 mail.create(request.target_folder)
                 mail.subscribe(request.target_folder)
+                mail.select(request.target_folder)  # Re-select the target folder to ensure it's properly initialized
 
-            # Move the email to the target folder
+            # Attempt to move the email to the target folder using UID
             result_status, move_data = mail.uid('MOVE', request.email_id, request.target_folder)
             if result_status != 'OK':
+                print(f"Move failed with message: {move_data}")  # Debugging output
                 raise HTTPException(status_code=500, detail="Failed to move email")
 
             response = {"status": "success", "detail": f"Email moved to {request.target_folder}"}
-            print(response)  # Optionally print the response for debugging
             return response
+
     except imaplib.IMAP4.error as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as general_error:
