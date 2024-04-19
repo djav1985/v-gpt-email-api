@@ -26,7 +26,6 @@ BASE_URL, API_KEY, accounts = load_configuration()
 # Setup the bearer token authentication scheme
 bearer_scheme = HTTPBearer(auto_error=False)
 
-# Async function to get the API key from the request
 async def get_api_key(credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)):
     # If the API key is not provided or does not match the expected value, return a 403 error
     if API_KEY and (not credentials or credentials.credentials != API_KEY):
