@@ -17,7 +17,7 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '22 14 * * 4'
+    - cron: '36 3 * * 4'
 
 jobs:
   analyze:
@@ -90,4 +90,3 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
-
