@@ -1,6 +1,8 @@
-# v-gpt-email-api 
+![Header](/images/header.png)
 
-## Overview
+# v-gpt-email-api
+
+## Description
 This FastAPI application provides robust email management capabilities, allowing users to interact with their email accounts for various functionalities like listing folders, reading, sending, and organizing emails. Openapi spec at /openapi.json
 
 ## Features
