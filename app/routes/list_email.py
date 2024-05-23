@@ -17,6 +17,7 @@ async def list_folders_and_emails(
 ):
     try:
         account_details = await get_account_details(request.account)
+        print(f"Account details fetched: {account_details}")
     except HTTPException as e:
         print(f"Error fetching account details: {e.detail}")
         raise HTTPException(status_code=404, detail="Account not found")
@@ -28,7 +29,7 @@ async def list_folders_and_emails(
 
         if request.action == "folders":
             # List folders
-            status, folder_list = await mail.list("", "*")
+            status, folder_list = await mail.list()
             print(f"IMAP server response for list folders: {status}, {folder_list}")
             if status != "OK":
                 raise HTTPException(
@@ -43,7 +44,7 @@ async def list_folders_and_emails(
         elif request.action == "emails":
             # List emails in the specified folder
             await mail.select(request.folder)
-            status, data = await mail.uid("search", None, "ALL")
+            status, data = await mail.search("ALL")
             print(f"IMAP server response for search emails: {status}, {data}")
             if status != "OK":
                 raise HTTPException(
@@ -53,7 +54,7 @@ async def list_folders_and_emails(
             email_ids = data[0].split()[-request.limit :]
             emails = []
             for email_id in email_ids:
-                typ, email_data = await mail.uid("fetch", email_id, "(RFC822)")
+                typ, email_data = await mail.fetch(email_id, "(RFC822)")
                 if typ != "OK":
                     continue
 
