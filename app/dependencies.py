@@ -2,11 +2,11 @@ import os
 import json
 import re
 from fastapi import HTTPException, Depends
-from email import message_from_bytes
-from email.header import decode_header
+from email import message_from_bytes, policy
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from aiosmtplib import SMTP, SMTPException
 from aioimaplib import IMAP4_SSL, IMAP4
+from email.header import decode_header
 
 
 async def get_account_details(email: str):
@@ -39,9 +39,9 @@ async def fetch_email(account_details, folder, email_id):
         result, data = await mail.uid("fetch", email_id, "(RFC822)")
         if result != "OK":
             raise HTTPException(
-                status_code=500, detail="Failed to fetch the original email"
+                status_code=500, detail="Failed to fetch the email"
             )
-        return data
+        return data[0][1]  # assuming data[0][1] contains the email content
     except IMAP4.error as e:
         raise HTTPException(status_code=500, detail=f"Error fetching email: {str(e)}")
     finally:
@@ -83,7 +83,7 @@ async def decode_header_value(val):
         decoded_string = ""
         for part, encoding in decoded_parts:
             if isinstance(part, bytes):
-                part = part.decode("utf-8", errors="ignore")
+                part = part.decode(encoding if encoding else "utf-8", errors="ignore")
             part = re.sub(r"[\ud800-\udfff]", "", part)
             decoded_string += part
         return decoded_string

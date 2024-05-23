@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from email import message_from_bytes
 from typing import Dict
-
 from models import ReadEmailsRequest
 from dependencies import (
     get_account_details,
@@ -12,25 +11,25 @@ from dependencies import (
 
 read_router = APIRouter()
 
-
 @read_router.post("/read_emails", operation_id="read_email")
 async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
     try:
         account_details = await get_account_details(request.account)
-    except HTTPException as e:
+    except HTTPException:
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
         data = await fetch_email(account_details, request.folder, request.email_id)
         email_msg = message_from_bytes(data[0][1])
-        email_body = await get_email_body(email_msg)  # Using the imported function
+        email_body = await get_email_body(email_msg)
 
-        return {
+        response = {
             "email_id": request.email_id,
             "sender": await decode_header_value(email_msg["From"]),
             "subject": email_msg.get("Subject", "No Subject"),
             "date": await decode_header_value(email_msg["Date"]),
             "body": email_body,
         }
-    except HTTPException as e:
+        return response
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading email: {str(e)}")

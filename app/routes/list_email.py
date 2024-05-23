@@ -1,4 +1,7 @@
+import aioimaplib
 from fastapi import APIRouter, Depends, HTTPException
+from email import message_from_bytes
+
 from models import ListFoldersAndEmailsRequest
 from dependencies import (
     get_api_key,
@@ -8,11 +11,7 @@ from dependencies import (
     get_email_body,
     send_email_utility,
 )
-import imaplib
-from email import message_from_bytes
-
 list_router = APIRouter()
-
 
 @list_router.post("/list_folders_and_emails", operation_id="list_folders_and_emails")
 async def list_folders_and_emails(
@@ -23,34 +22,25 @@ async def list_folders_and_emails(
     except HTTPException as e:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    if request.action == "folders":
-        # List folders
-        try:
-            with aioimaplib.IMAP4_SSL(account_details["imap_server"]) as mail:
-                await mail.login(account_details["email"], account_details["password"])
+    try:
+        async with aioimaplib.IMAP4_SSL(account_details["imap_server"]) as mail:
+            await mail.login(account_details["email"], account_details["password"])
+
+            if request.action == "folders":
+                # List folders
                 status, folder_list = await mail.list()
                 if status != "OK":
                     raise HTTPException(
                         status_code=500, detail="Failed to list folders"
                     )
 
-                folders = []
-                for folder in folder_list:
-                    parts = folder.decode("utf-8").split(" ")
-                    folder_name = " ".join(parts[2:]).strip('"')
-                    folders.append(folder_name)
-
+                folders = [
+                    " ".join(folder.decode("utf-8").split(" ")[2:]).strip('"')
+                    for folder in folder_list
+                ]
                 return {"folders": folders}
-        except aioimaplib.IMAP4.error as e:
-            raise HTTPException(
-                status_code=500, detail=f"Error listing folders: {str(e)}"
-            )
-
-    elif request.action == "emails":
-        # List emails in the specified folder
-        try:
-            with aioimaplib.IMAP4_SSL(account_details["imap_server"]) as mail:
-                await mail.login(account_details["email"], account_details["password"])
+            elif request.action == "emails":
+                # List emails in the specified folder
                 await mail.select(request.folder)
                 status, data = await mail.uid("search", None, "ALL")
                 if status != "OK":
@@ -70,15 +60,13 @@ async def list_folders_and_emails(
                     from_header = await decode_header_value(email_msg["From"])
                     date_header = await decode_header_value(email_msg["Date"])
 
-                    if email_msg.is_multipart():
-                        body = "".join(
-                            part.get_payload(decode=True).decode("utf-8")
-                            for part in email_msg.get_payload()
-                            if part.get_content_type() == "text/plain"
-                        )
-                    else:
-                        body = email_msg.get_payload(decode=True).decode("utf-8")
-
+                    body = (
+                        "".join(part.get_payload(decode=True).decode("utf-8")
+                                for part in email_msg.get_payload()
+                                if part.get_content_type() == "text/plain")
+                        if email_msg.is_multipart()
+                        else email_msg.get_payload(decode=True).decode("utf-8")
+                    )
                     emails.append(
                         {
                             "email_id": email_id.decode("utf-8").strip(),
@@ -88,9 +76,14 @@ async def list_folders_and_emails(
                             "body_preview": body[:50],
                         }
                     )
-
                 return {"emails": emails}
-        except aioimaplib.IMAP4.error as e:
-            raise HTTPException(
-                status_code=500, detail=f"Error fetching emails: {str(e)}"
-            )
+            else:
+                raise HTTPException(status_code=400, detail="Invalid action specified")
+    except aioimaplib.IMAP4.error as e:
+        raise HTTPException(
+            status_code=500, detail=f"IMAP error: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"An error occurred: {str(e)}"
+        )

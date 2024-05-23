@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field, EmailStr, conint, validator
 from typing import Optional, List, Union
 from dependencies import get_account_details
 
-
 class SendEmailRequest(BaseModel):
     account: EmailStr = Field(
         ..., description="The email account that will be used to send the email."
@@ -32,12 +31,9 @@ class SendEmailRequest(BaseModel):
         if isinstance(value, str):
             return EmailStr.validate(value)
         elif isinstance(value, list):
-            for email in value:
-                EmailStr.validate(email)
-            return value
+            return [EmailStr.validate(email) for email in value]
         else:
             raise ValueError("Invalid email address format")
-
 
 class ListFoldersAndEmailsRequest(BaseModel):
     account: EmailStr = Field(..., description="The email account to be used.")
@@ -71,7 +67,6 @@ class ListFoldersAndEmailsRequest(BaseModel):
             raise ValueError("Limit must be provided when action is 'emails'")
         return value
 
-
 class ReadEmailsRequest(BaseModel):
     account: EmailStr = Field(..., description="The email account to be used.")
     folder: str = Field(..., description="The folder containing the email to read.")
@@ -82,7 +77,6 @@ class ReadEmailsRequest(BaseModel):
         # This raises HTTPException if the account is not found
         get_account_details(value)
         return value
-
 
 class MoveEmailsRequest(BaseModel):
     account: EmailStr = Field(..., description="The email account to be used.")
