@@ -14,11 +14,14 @@ from dependencies import (
 # Create an instance of the FastAPI router
 send_router = APIRouter()
 
+
 @send_router.post("/send_email", operation_id="send_an_email")
 async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_key)):
     try:
         account_details = await get_account_details(request.account)
-    except HTTPException:
+        print(f"Account details fetched: {account_details}")
+    except HTTPException as e:
+        print(f"Error fetching account details: {e.detail}")
         raise HTTPException(status_code=404, detail="Account not found")
 
     message = MIMEMultipart()
@@ -37,11 +40,13 @@ async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_k
             message["In-Reply-To"] = in_reply_to
             message["References"] = in_reply_to
             response_detail = f"Reply sent successfully to {original_sender}"
+            print(f"Preparing to reply to email from: {original_sender}")
         else:
             # Send a new email
             message["To"] = request.to_address
             message["Subject"] = request.subject
             response_detail = f"Email sent successfully to {request.to_address}"
+            print(f"Preparing to send new email to: {request.to_address}")
 
         message.attach(MIMEText(request.body, "plain"))
         recipient = message["To"]
@@ -51,6 +56,8 @@ async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_k
             "status": "success",
             "detail": response_detail,
         }
+        print(f"Email sent successfully. Response: {response}")
     except Exception as e:
+        print(f"Error sending email: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
     return response
