@@ -1,11 +1,14 @@
 import os
 import json
 import re
+
+import aiosmtplib
+import aioimaplib
+
 from fastapi import HTTPException, Depends
-from email import message_from_bytes, policy
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from aiosmtplib import SMTP, SMTPException
-from aioimaplib import aioimaplib, IMAP4_SSL, IMAP4
+
+from email import message_from_bytes, policy
 from email.header import decode_header
 
 
