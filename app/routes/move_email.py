@@ -51,7 +51,5 @@ async def move_emails(
                 "status": "success",
                 "detail": f"Email moved to {target_folder} successfully",
             }
-    except aioimaplib.IMAP4.error as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error processing request: {str(e)}"
-        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error moving email: {str(e)}
