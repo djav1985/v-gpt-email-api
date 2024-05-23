@@ -4,11 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
 
-from routers.send_email import send_router
-from routers.list_emails import list_router
-from routers.read_email import read_router
-from routers.move_email import move_router
-from routers.root import root_router
+from routes.send_email import send_router
+from routes.list_emails import list_router
+from routes.read_email import read_router
+from routes.move_email import move_router
+from routes.root import root_router
 
 # FastAPI application instance setup
 app = FastAPI(
