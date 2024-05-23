@@ -5,7 +5,7 @@ from fastapi import HTTPException, Depends
 from email import message_from_bytes, policy
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from aiosmtplib import SMTP, SMTPException
-from aioimaplib import IMAP4_SSL, IMAP4
+from aioimaplib import aioimaplib, IMAP4_SSL, IMAP4
 from email.header import decode_header
 
 
