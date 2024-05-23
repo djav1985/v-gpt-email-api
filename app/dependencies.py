@@ -30,7 +30,7 @@ async def send_email_utility(account_details, to_address, email_message):
             await server.sendmail(
                 account_details["email"], to_address, email_message.as_string()
             )
-    except SMTPException as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
 
 
@@ -45,7 +45,7 @@ async def fetch_email(account_details, folder, email_id):
                 status_code=500, detail="Failed to fetch the email"
             )
         return data[0][1]  # assuming data[0][1] contains the email content
-    except IMAP4.error as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching email: {str(e)}")
     finally:
         await mail.logout()
