@@ -1,4 +1,5 @@
-from aioimaplib import aioimaplib, IMAP4_SSL, IMAP4
+import aioimaplib
+
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict
 
