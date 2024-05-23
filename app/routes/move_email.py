@@ -52,4 +52,4 @@ async def move_emails(
                 "detail": f"Email moved to {target_folder} successfully",
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error moving email: {str(e)}
+        raise HTTPException(status_code=500, detail=f"Error moving email: {str(e)}")
