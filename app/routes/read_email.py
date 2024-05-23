@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from email import message_from_bytes
 from typing import Dict
+
 from models import ReadEmailsRequest
 from dependencies import (
     get_account_details,

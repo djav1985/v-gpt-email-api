@@ -1,4 +1,4 @@
-import aioimaplib
+from aioimaplib import IMAP4_SSL, IMAP4
 from fastapi import APIRouter, Depends, HTTPException
 from email import message_from_bytes
 
@@ -11,6 +11,7 @@ from dependencies import (
     get_email_body,
     send_email_utility,
 )
+
 list_router = APIRouter()
 
 @list_router.post("/list_folders_and_emails", operation_id="list_folders_and_emails")
