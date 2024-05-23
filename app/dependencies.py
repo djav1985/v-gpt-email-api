@@ -2,14 +2,14 @@ import os
 import json
 import re
 
-import aiosmtplib
-from aioimaplib import aioimaplib, IMAP4_SSL
-
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from email import message_from_bytes, policy
 from email.header import decode_header
+
+import aiosmtplib
+from aioimaplib import aioimaplib, IMAP4_SSL
 
 
 def validate_account_sync(email: str):
@@ -44,12 +44,12 @@ async def send_email_utility(account_details, to_address, email_message):
 
 
 async def fetch_email(account_details, folder, email_id):
-    mail = aioimaplib.IMAP4_SSL(account_details["imap_server"])
+    mail = IMAP4_SSL(account_details["imap_server"])
     try:
         await mail.wait_hello_from_server()
         await mail.login(account_details["email"], account_details["password"])
         await mail.select(folder)
-        result, data = await mail.uid("fetch", email_id, "(RFC822)")
+        result, data = await mail.fetch(email_id, "(RFC822)")
         if result != "OK":
             raise HTTPException(status_code=500, detail="Failed to fetch the email")
         return data[0][1]  # assuming data[0][1] contains the email content
