@@ -30,7 +30,7 @@ async def get_account_details(email: str):
 
 async def send_email_utility(account_details, to_address, email_message):
     try:
-        async with SMTP(
+        async with aiosmtplib.SMTP(
             hostname=account_details["smtp_server"], port=account_details["smtp_port"]
         ) as server:
             await server.starttls()
@@ -39,21 +39,22 @@ async def send_email_utility(account_details, to_address, email_message):
                 account_details["email"], to_address, email_message.as_string()
             )
     except Exception as e:
+        print(f"Error sending email: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
 
 
 async def fetch_email(account_details, folder, email_id):
-    mail = IMAP4_SSL(account_details["imap_server"])
+    mail = aioimaplib.IMAP4_SSL(account_details["imap_server"])
     try:
+        await mail.wait_hello_from_server()
         await mail.login(account_details["email"], account_details["password"])
         await mail.select(folder)
         result, data = await mail.uid("fetch", email_id, "(RFC822)")
         if result != "OK":
-            raise HTTPException(
-                status_code=500, detail="Failed to fetch the email"
-            )
+            raise HTTPException(status_code=500, detail="Failed to fetch the email")
         return data[0][1]  # assuming data[0][1] contains the email content
     except Exception as e:
+        print(f"Error fetching email: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching email: {str(e)}")
     finally:
         await mail.logout()
@@ -80,6 +81,7 @@ async def get_email_body(message):
         else:
             return message.get_payload(decode=True).decode("utf-8", errors="ignore")
     except Exception as e:
+        print(f"Error decoding email body: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error decoding email body: {str(e)}"
         )
@@ -99,6 +101,7 @@ async def decode_header_value(val):
             decoded_string += part
         return decoded_string
     except Exception as e:
+        print(f"Error decoding header value: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error decoding header value: {str(e)}"
         )
@@ -113,6 +116,7 @@ async def get_api_key(
             raise HTTPException(status_code=403, detail="Invalid or missing API key")
         return credentials.credentials if credentials else None
     except Exception as e:
+        print(f"Error retrieving API key: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error retrieving API key: {str(e)}"
         )
