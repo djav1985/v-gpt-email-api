@@ -29,7 +29,10 @@ async def list_folders_and_emails(
             # List folders
             status, folder_list = await mail.list("", "*")
             if status != "OK":
-                raise HTTPException(status_code=500, detail="Failed to list folders")
+                print(f"IMAP server response for list folders: {status}, {folder_list}")
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to list folders: {status}"
+                )
 
             folders = [
                 " ".join(folder.decode("utf-8").split(" ")[2:]).strip('"')
@@ -41,7 +44,10 @@ async def list_folders_and_emails(
             await mail.select(request.folder)
             status, data = await mail.uid("search", None, "ALL")
             if status != "OK":
-                raise HTTPException(status_code=500, detail="Failed to search emails")
+                print(f"IMAP server response for search emails: {status}, {data}")
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to search emails: {status}"
+                )
 
             email_ids = data[0].split()[-request.limit :]
             emails = []
