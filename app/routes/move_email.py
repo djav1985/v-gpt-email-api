@@ -14,7 +14,7 @@ move_router = APIRouter()
 @move_router.post("/move_emails", operation_id="move_email")
 async def move_emails(
     request: MoveEmailsRequest, api_key: str = Depends(get_api_key)
-) -> Dict[str, str]:
+):
     try:
         account_details = await get_account_details(request.account)
     except KeyError as e:
