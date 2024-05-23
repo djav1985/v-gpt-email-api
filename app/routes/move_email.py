@@ -1,0 +1,59 @@
+from fastapi import APIRouter, Depends, HTTPException
+import aioimaplib
+from typing import Dict
+
+from models import MoveEmailsRequest
+from dependencies import (
+    get_api_key,
+    get_account_details,
+)
+
+move_router = APIRouter()
+
+
+@move_router.post("/move_emails", operation_id="move_email")
+async def move_emails(
+    request: MoveEmailsRequest, api_key: str = Depends(get_api_key)
+) -> Dict[str, str]:
+    account_details = await get_account_details(request.account)
+
+    try:
+        async with aioimaplib.IMAP4_SSL(account_details["imap_server"]) as mail:
+            await mail.login(account_details["email"], account_details["password"])
+
+            # Check server capabilities
+            capabilities = await mail.capabilities()
+            if "MOVE" not in capabilities:
+                raise HTTPException(
+                    status_code=500, detail="MOVE command not supported by the server"
+                )
+
+            await mail.select(request.folder)
+            target_folder = "Trash" if request.action == "trash" else "Spam"
+
+            # Attempt to move the email
+            result_status, move_data = await mail.uid(
+                "MOVE", request.email_id, target_folder
+            )
+            if result_status != "OK":
+                error_detail = (
+                    move_data[0].decode("utf-8")
+                    if move_data and isinstance(move_data[0], bytes)
+                    else str(move_data)
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to move email to {target_folder}: {error_detail}",
+                )
+
+            return {
+                "status": "success",
+                "detail": f"Email moved to {target_folder} successfully",
+            }
+
+    except aioimaplib.IMAP4.error as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error processing request: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
