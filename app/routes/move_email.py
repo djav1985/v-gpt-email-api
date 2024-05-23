@@ -1,4 +1,5 @@
-from aioimaplib import aioimaplib, IMAP4_SSL, IMAP4Exception
+import aioimaplib
+
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict
 
@@ -13,7 +14,7 @@ move_router = APIRouter()
 @move_router.post("/move_emails", operation_id="move_email")
 async def move_emails(
     request: MoveEmailsRequest, api_key: str = Depends(get_api_key)
-) -> Dict[str, str]:
+):
     try:
         account_details = await get_account_details(request.account)
     except KeyError as e:
@@ -50,7 +51,5 @@ async def move_emails(
                 "status": "success",
                 "detail": f"Email moved to {target_folder} successfully",
             }
-    except aioimaplib.IMAP4Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error processing request: {str(e)}"
-        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error moving email: {str(e)}")

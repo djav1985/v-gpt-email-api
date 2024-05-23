@@ -1,4 +1,4 @@
-from aioimaplib import aioimaplib, IMAP4_SSL, IMAP4Exception
+import aioimaplib
 from fastapi import APIRouter, Depends, HTTPException
 from email import message_from_bytes
 
@@ -80,10 +80,6 @@ async def list_folders_and_emails(
                 return {"emails": emails}
             else:
                 raise HTTPException(status_code=400, detail="Invalid action specified")
-    except aioimaplib.IMAP4Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"IMAP error: {str(e)}"
-        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"An error occurred: {str(e)}"
