@@ -20,14 +20,14 @@ async def list_folders_and_emails(
     except HTTPException as e:
         raise HTTPException(status_code=404, detail="Account not found")
 
+    mail = aioimaplib.IMAP4_SSL(account_details["imap_server"])
     try:
-        mail = aioimaplib.IMAP4_SSL(account_details["imap_server"])
         await mail.wait_hello_from_server()
         await mail.login(account_details["email"], account_details["password"])
 
         if request.action == "folders":
             # List folders
-            status, folder_list = await mail.list()
+            status, folder_list = await mail.list("", "*")
             if status != "OK":
                 raise HTTPException(status_code=500, detail="Failed to list folders")
 
