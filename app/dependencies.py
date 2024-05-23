@@ -3,7 +3,7 @@ import json
 import re
 
 import aiosmtplib
-import aioimaplib
+from aioimaplib import aioimaplib, IMAP4_SSL
 
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials

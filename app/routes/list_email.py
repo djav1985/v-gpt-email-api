@@ -1,4 +1,4 @@
-import aioimaplib
+from aioimaplib import aioimaplib, IMAP4_SSL
 from fastapi import APIRouter, Depends, HTTPException
 from email import message_from_bytes
 from models import ListFoldersAndEmailsRequest

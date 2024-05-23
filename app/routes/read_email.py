@@ -22,7 +22,7 @@ async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
 
     try:
         data = await fetch_email(account_details, request.folder, request.email_id)
-        email_msg = message_from_bytes(data[0][1])
+        email_msg = message_from_bytes(data)
         email_body = await get_email_body(email_msg)
 
         response = {
