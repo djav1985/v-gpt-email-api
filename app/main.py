@@ -5,7 +5,7 @@ from starlette.responses import FileResponse
 
 
 from routes.send_email import send_router
-from routes.list_emails import list_router
+from routes.list_email import list_router
 from routes.read_email import read_router
 from routes.move_email import move_router
 from routes.root import root_router
