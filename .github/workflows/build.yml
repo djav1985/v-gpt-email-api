@@ -3,7 +3,8 @@ name: Build and Push API Image
 on:
   push:
     branches:
-      - 'master'
+      - 'main'
+      - 'dev'
   release:
     types: [published]
 
