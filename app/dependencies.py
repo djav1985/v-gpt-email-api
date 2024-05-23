@@ -12,6 +12,14 @@ from email import message_from_bytes, policy
 from email.header import decode_header
 
 
+def validate_account_sync(email: str):
+    accounts = json.loads(os.getenv("ACCOUNTS", "[]"))
+    account_details = next((acc for acc in accounts if acc["email"] == email), None)
+    if not account_details:
+        raise ValueError("Account not found")
+    return account_details
+
+
 async def get_account_details(email: str):
     accounts = json.loads(os.getenv("ACCOUNTS", "[]"))
     account_details = next((acc for acc in accounts if acc["email"] == email), None)

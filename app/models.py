@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, EmailStr, conint, validator
 from typing import Optional, List, Union
-from dependencies import get_account_details
+from dependencies import validate_account_sync
+
 
 class SendEmailRequest(BaseModel):
     account: EmailStr = Field(
@@ -22,8 +23,7 @@ class SendEmailRequest(BaseModel):
 
     @validator("account")
     def validate_account(cls, value):
-        # This raises HTTPException if the account is not found
-        get_account_details(value)
+        validate_account_sync(value)
         return value
 
     @validator("to_address")
@@ -34,6 +34,7 @@ class SendEmailRequest(BaseModel):
             return [EmailStr.validate(email) for email in value]
         else:
             raise ValueError("Invalid email address format")
+
 
 class ListFoldersAndEmailsRequest(BaseModel):
     account: EmailStr = Field(..., description="The email account to be used.")
@@ -48,6 +49,11 @@ class ListFoldersAndEmailsRequest(BaseModel):
         None,
         description="The number of most recent emails to list. Used only when listing emails.",
     )
+
+    @validator("account")
+    def validate_account(cls, value):
+        validate_account_sync(value)
+        return value
 
     @validator("action")
     def validate_action(cls, value):
@@ -67,6 +73,7 @@ class ListFoldersAndEmailsRequest(BaseModel):
             raise ValueError("Limit must be provided when action is 'emails'")
         return value
 
+
 class ReadEmailsRequest(BaseModel):
     account: EmailStr = Field(..., description="The email account to be used.")
     folder: str = Field(..., description="The folder containing the email to read.")
@@ -74,9 +81,9 @@ class ReadEmailsRequest(BaseModel):
 
     @validator("account")
     def validate_account(cls, value):
-        # This raises HTTPException if the account is not found
-        get_account_details(value)
+        validate_account_sync(value)
         return value
+
 
 class MoveEmailsRequest(BaseModel):
     account: EmailStr = Field(..., description="The email account to be used.")
@@ -88,8 +95,7 @@ class MoveEmailsRequest(BaseModel):
 
     @validator("account")
     def validate_account(cls, value):
-        # This raises HTTPException if the account is not found
-        get_account_details(value)
+        validate_account_sync(value)
         return value
 
     @validator("action")
