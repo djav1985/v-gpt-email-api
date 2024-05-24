@@ -26,11 +26,16 @@ class SendEmailRequest(BaseModel):
         validate_account_sync(value)
         return value
 
-    @validator("to_address", pre=True, each_item=True)
+    @validator("to_address")
     def validate_to_address(cls, value):
-        if not isinstance(value, str):
+        if isinstance(value, str):
+            return EmailStr.validate(value)
+        elif isinstance(value, list):
+            for email in value:
+                EmailStr.validate(email)
+            return value
+        else:
             raise ValueError("Invalid email address format")
-        return value
 
 
 class ListFoldersAndEmailsRequest(BaseModel):
