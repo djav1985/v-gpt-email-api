@@ -4,18 +4,16 @@ import aiofiles
 import aiohttp
 import tempfile
 import shutil
-
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-
 from typing import Union, List, Optional
-from pydantic import EmailStr, HttpUrl  # Import HttpUrl here
+from pydantic import EmailStr, HttpUrl
 
+# Environment variables
 ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
 ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
 ACCOUNT_SMTP_SERVER = os.getenv("ACCOUNT_SMTP_SERVER")
@@ -36,7 +34,6 @@ ALLOWED_FILE_TYPES = {
 }
 MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 
-
 async def fetch_file(session, url, temp_dir):
     async with session.get(url) as response:
         if response.status != 200:
@@ -55,14 +52,11 @@ async def fetch_file(session, url, temp_dir):
 
         return file_path
 
-
 async def send_email(
     to_address: Union[EmailStr, List[EmailStr]],
     subject: str,
     body: str,
-    file_url: Optional[
-        Union[str, List[Union[str, HttpUrl]]]
-    ] = None,  # Added as a safeguard for nested generics
+    file_url: Optional[Union[str, List[Union[str, HttpUrl]]]] = None,
 ):
     if not os.path.exists(SIGNATURE_PATH):
         raise HTTPException(status_code=500, detail="Signature file not found")
@@ -80,7 +74,7 @@ async def send_email(
 
     # Handle file attachments
     if file_url:
-        # Simplified to check for str and HttpUrl inclusivity within lists safely:
+        # Simplify to check for str and HttpUrl inclusivity within lists safely
         if isinstance(file_url, (str, HttpUrl)):
             file_url = [file_url]
         elif isinstance(file_url, list):
@@ -139,7 +133,6 @@ async def send_email(
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
-
 
 # This function checks if the provided API key is valid or not
 async def get_api_key(
