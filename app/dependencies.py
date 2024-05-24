@@ -113,3 +113,14 @@ async def send_email(
         password=ACCOUNT_PASSWORD,
         use_tls=True,
     )
+
+
+# This function checks if the provided API key is valid or not
+async def get_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+):
+    if os.getenv("MEMORIES_API_KEY") and (
+        not credentials or credentials.credentials != os.getenv("MEMORIES_API_KEY")
+    ):
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    return credentials.credentials if credentials else None
