@@ -40,7 +40,7 @@ async def list_folders_and_emails(
         elif request.action == "emails":
             # List emails in the specified folder
             await mail.select(request.folder)
-            status, data = await mail.uid("search", "ALL")
+            status, data = await mail.uid("search", None, "ALL")
             if status != "OK":
                 raise HTTPException(status_code=500, detail="Failed to search emails")
 
