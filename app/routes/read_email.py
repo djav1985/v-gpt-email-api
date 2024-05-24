@@ -22,7 +22,11 @@ async def read_emails(request: ReadEmailsRequest) -> Dict[str, str]:
 
     try:
         data = await fetch_email(account_details, request.folder, request.email_id)
-        email_msg = message_from_bytes(data)
+        if isinstance(data[0], int):  # Check if data is an integer
+            print(f"Unexpected integer data: {data[0]}")
+            raise HTTPException(status_code=500, detail="Unexpected data format")
+
+        email_msg = message_from_bytes(data[0][1])
         email_body = await get_email_body(email_msg)
 
         response = {

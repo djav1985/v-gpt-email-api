@@ -1,13 +1,13 @@
-from pydantic import BaseModel, Field, conint, validator
+from pydantic import BaseModel, Field, EmailStr, conint, validator, root_validator
 from typing import Optional, List, Union
 from dependencies import validate_account_sync
 
 
 class SendEmailRequest(BaseModel):
-    account: str = Field(
+    account: EmailStr = Field(
         ..., description="The email account that will be used to send the email."
     )
-    to_address: Union[str, List[str]] = Field(
+    to_address: Union[EmailStr, List[EmailStr]] = Field(
         ..., description="The recipient's email address or list of email addresses."
     )
     subject: str = Field(..., description="The subject of the email.", max_length=255)
@@ -26,27 +26,21 @@ class SendEmailRequest(BaseModel):
         validate_account_sync(value)
         return value
 
-    @validator("to_address")
-    def validate_to_address(cls, value):
-        if isinstance(value, str):
-            return cls.validate_email(value)
-        elif isinstance(value, list):
-            return [cls.validate_email(email) for email in value]
+    @root_validator(pre=True)
+    def validate_to_address(cls, values):
+        to_address = values.get("to_address")
+        if isinstance(to_address, str):
+            values["to_address"] = [to_address]
+        elif isinstance(to_address, list):
+            for email in to_address:
+                EmailStr.validate(email)
         else:
             raise ValueError("Invalid email address format")
-
-    @staticmethod
-    def validate_email(email: str) -> str:
-        import re
-
-        email_regex = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
-        if not re.match(email_regex, email):
-            raise ValueError("Invalid email address")
-        return email
+        return values
 
 
 class ListFoldersAndEmailsRequest(BaseModel):
-    account: str = Field(..., description="The email account to be used.")
+    account: EmailStr = Field(..., description="The email account to be used.")
     action: str = Field(
         ..., description="The action to perform: 'folders' or 'emails'."
     )
@@ -84,7 +78,7 @@ class ListFoldersAndEmailsRequest(BaseModel):
 
 
 class ReadEmailsRequest(BaseModel):
-    account: str = Field(..., description="The email account to be used.")
+    account: EmailStr = Field(..., description="The email account to be used.")
     folder: str = Field(..., description="The folder containing the email to read.")
     email_id: str = Field(..., description="The ID of the email to read.")
 
@@ -95,7 +89,7 @@ class ReadEmailsRequest(BaseModel):
 
 
 class MoveEmailsRequest(BaseModel):
-    account: str = Field(..., description="The email account to be used.")
+    account: EmailStr = Field(..., description="The email account to be used.")
     folder: str = Field(..., description="The folder containing the email to move.")
     email_id: str = Field(..., description="The ID of the email to move.")
     action: str = Field(

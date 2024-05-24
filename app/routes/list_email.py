@@ -18,7 +18,9 @@ async def list_folders_and_emails(
 ):
     try:
         account_details = await get_account_details(request.account)
+        print(f"Account details fetched: {account_details}")
     except HTTPException as e:
+        print(f"Error fetching account details: {e.detail}")
         raise HTTPException(status_code=404, detail="Account not found")
 
     mail = IMAP4_SSL(account_details["imap_server"])
@@ -29,6 +31,7 @@ async def list_folders_and_emails(
         if request.action == "folders":
             # List folders
             status, folder_list = await mail.list("", "*")
+            print(f"IMAP server response for list folders: {status}, {folder_list}")
             if status != "OK":
                 raise HTTPException(status_code=500, detail="Failed to list folders")
 
@@ -40,7 +43,8 @@ async def list_folders_and_emails(
         elif request.action == "emails":
             # List emails in the specified folder
             await mail.select(request.folder)
-            status, data = await mail.uid("search", None, "ALL")
+            status, data = await mail.uid("search", "ALL")
+            print(f"IMAP server response for search emails: {status}, {data}")
             if status != "OK":
                 raise HTTPException(status_code=500, detail="Failed to search emails")
 
@@ -78,6 +82,7 @@ async def list_folders_and_emails(
         else:
             raise HTTPException(status_code=400, detail="Invalid action specified")
     except Exception as e:
+        print(f"An error occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     finally:
         await mail.logout()

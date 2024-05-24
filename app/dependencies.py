@@ -37,21 +37,23 @@ async def send_email_utility(account_details, to_address, email_message):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
 
+
 async def fetch_email(account_details, folder, email_id):
-    mail = aioimaplib.IMAP4_SSL(account_details["imap_server"])
+    mail = IMAP4_SSL(account_details["imap_server"])
     try:
         await mail.login(account_details["email"], account_details["password"])
         await mail.select(folder)
         result, data = await mail.uid("fetch", email_id, "(RFC822)")
         if result != "OK":
-            raise HTTPException(
-                status_code=500, detail="Failed to fetch the email"
-            )
-        return data[0][1]  # assuming data[0][1] contains the email content
+            raise HTTPException(status_code=500, detail="Failed to fetch the email")
+        if not data or not isinstance(data[0], tuple):  # Additional check
+            raise HTTPException(status_code=500, detail="Unexpected data format")
+        return data[0][1]  # Return the actual email content
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching email: {str(e)}")
     finally:
         await mail.logout()
+
 
 async def get_email_body(message):
     try:
