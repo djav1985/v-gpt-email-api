@@ -10,7 +10,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from typing import Union, List, Optional
 from pydantic import EmailStr
-from fastapi import HTTPException, depends
+from fastapi import HTTPException, Depends
 
 ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
 ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
