@@ -42,6 +42,7 @@ async def send_email_utility(account_details, to_address, email_message):
 async def fetch_email(account_details, folder, email_id):
     mail = IMAP4_SSL(account_details["imap_server"])
     try:
+        await mail.wait_hello_from_server()
         await mail.login(account_details["email"], account_details["password"])
         await mail.select(folder)
         result, data = await mail.uid("fetch", email_id, "(RFC822)")

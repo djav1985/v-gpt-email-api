@@ -26,25 +26,11 @@ async def send_email(request: SendEmailRequest, api_key: str = Depends(get_api_k
     message["From"] = account_details["email"]
 
     try:
-        if request.email_id:
-            # Reply to an existing email
-            data = await fetch_email(account_details, request.folder, request.email_id)
-            original_email = message_from_bytes(data)
-            original_sender = original_email["From"]
-            original_subject = original_email["Subject"]
-            in_reply_to = original_email.get("Message-ID", "")
-            message["To"] = original_sender
-            message["Subject"] = f"RE: {original_subject}"
-            message["In-Reply-To"] = in_reply_to
-            message["References"] = in_reply_to
-            response_detail = f"Reply sent successfully to {original_sender}"
-        else:
-            # Send a new email
-            message["To"] = request.to_address
-            message["Subject"] = request.subject
-            response_detail = f"Email sent successfully to {request.to_address}"
-
+        message["To"] = request.to_address
+        message["Subject"] = request.subject
         message.attach(MIMEText(request.body, "plain"))
+        response_detail = f"Email sent successfully to {request.to_address}"
+
         recipient = message["To"]
         await send_email_utility(account_details, recipient, message)
 
