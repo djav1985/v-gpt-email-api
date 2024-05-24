@@ -13,6 +13,7 @@ from email import encoders
 from typing import Union, List, Optional
 from pydantic import EmailStr, HttpUrl
 
+
 # Environment variables
 ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
 ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
@@ -34,6 +35,7 @@ ALLOWED_FILE_TYPES = {
 }
 MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 
+
 async def fetch_file(session, url, temp_dir):
     async with session.get(url) as response:
         if response.status != 200:
@@ -52,18 +54,21 @@ async def fetch_file(session, url, temp_dir):
 
         return file_path
 
+
 async def send_email(
-    to_address: Union[EmailStr, List[EmailStr]],
+    to_address: str,
     subject: str,
     body: str,
-    file_url: Optional[Union[str, List[Union[str, HttpUrl]]]] = None,
+    file_url: Optional[str] = None,
 ):
     if not os.path.exists(SIGNATURE_PATH):
         raise HTTPException(status_code=500, detail="Signature file not found")
 
     msg = MIMEMultipart()
+    # Convert to_address string into a list of email addresses
+    to_addresses = [address.strip() for address in to_address.split(",")]
     msg["From"] = ACCOUNT_EMAIL
-    msg["To"] = ", ".join(to_address) if isinstance(to_address, list) else to_address
+    msg["To"] = ", ".join(to_addresses)
     msg["Subject"] = subject
     msg["Reply-To"] = ACCOUNT_REPLY_TO
 
@@ -74,21 +79,15 @@ async def send_email(
 
     # Handle file attachments
     if file_url:
-        # Simplify to check for str and HttpUrl inclusivity within lists safely
-        if isinstance(file_url, (str, HttpUrl)):
-            file_url = [file_url]
-        elif isinstance(file_url, list):
-            if not all(isinstance(url, (str, HttpUrl)) for url in file_url):
-                raise HTTPException(status_code=400, detail="Invalid file URL format")
-        else:
-            raise HTTPException(status_code=400, detail="Invalid file URL format")
+        # Convert the file_url string into a list of URLs
+        file_urls = [url.strip() for url in file_url.split(",")]
 
         total_size = 0
         temp_dir = tempfile.mkdtemp()
 
         try:
             async with aiohttp.ClientSession() as session:
-                for url in file_url:
+                for url in file_urls:
                     file_path = await fetch_file(session, url, temp_dir)
                     file_size = os.path.getsize(file_path)
 
