@@ -109,14 +109,19 @@ async def send_email(
         finally:
             shutil.rmtree(temp_dir)
 
-    await aiosmtplib.send(
-        msg,
-        hostname=ACCOUNT_SMTP_SERVER,
-        port=ACCOUNT_SMTP_PORT,
-        username=ACCOUNT_EMAIL,
-        password=ACCOUNT_PASSWORD,
-        start_tls=True,  # Use start_tls instead of use_tls
-    )
+    try:
+        await aiosmtplib.send(
+            msg,
+            hostname=ACCOUNT_SMTP_SERVER,
+            port=ACCOUNT_SMTP_PORT,
+            username=ACCOUNT_EMAIL,
+            password=ACCOUNT_PASSWORD,
+            start_tls=True,  # Use start_tls instead of use_tls
+        )
+    except aiosmtplib.errors.SMTPException as e:
+        raise HTTPException(status_code=500, detail=f"SMTP server error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
 # This function checks if the provided API key is valid or not
