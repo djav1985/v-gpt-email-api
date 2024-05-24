@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from typing import Union, List, Optional
+from typing import Optional
 from pydantic import EmailStr, HttpUrl
 
 
@@ -133,7 +133,7 @@ async def send_email(
         print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-# This function checks if the provided API key is valid or not
+
 async def get_api_key(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ):
