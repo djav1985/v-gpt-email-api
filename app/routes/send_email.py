@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from models import SendEmailRequest
 from dependencies import send_email, get_api_key
 
@@ -17,6 +17,8 @@ async def send_email_endpoint(
         await send_email(to_address, subject, body, file_url)
         return {"message": "Email sent successfully"}
     except HTTPException as e:
+        print(f"HTTPException: {e.detail}")
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

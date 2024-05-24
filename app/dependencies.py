@@ -40,6 +40,7 @@ MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 async def fetch_file(session, url, temp_dir):
     async with session.get(url) as response:
         if response.status != 200:
+            print(f"Failed to download file from {url} with status {response.status}")
             raise HTTPException(
                 status_code=response.status,
                 detail=f"Failed to download file from {url}",
@@ -106,6 +107,12 @@ async def send_email(
                         f"attachment; filename={os.path.basename(file_path)}",
                     )
                     msg.attach(part)
+        except HTTPException as e:
+            print(f"HTTPException during file handling: {e.detail}")
+            raise
+        except Exception as e:
+            print(f"Unexpected error during file handling: {str(e)}")
+            raise
         finally:
             shutil.rmtree(temp_dir)
 
@@ -119,8 +126,10 @@ async def send_email(
             start_tls=True,  # Use start_tls instead of use_tls
         )
     except aiosmtplib.errors.SMTPException as e:
+        print(f"SMTPException: {str(e)}")
         raise HTTPException(status_code=500, detail=f"SMTP server error: {str(e)}")
     except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
@@ -131,5 +140,6 @@ async def get_api_key(
     if os.getenv("API_KEY") and (
         not credentials or credentials.credentials != os.getenv("API_KEY")
     ):
+        print("Invalid or missing API key")
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
     return credentials.credentials if credentials else None
