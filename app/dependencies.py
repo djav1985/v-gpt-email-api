@@ -60,7 +60,9 @@ async def send_email(
     to_address: Union[EmailStr, List[EmailStr]],
     subject: str,
     body: str,
-    file_url: Optional[Union[str, List[str]]] = None,
+    file_url: Optional[
+        Union[str, List[Union[str, HttpUrl]]]
+    ] = None,  # Added as a safeguard for nested generics
 ):
     if not os.path.exists(SIGNATURE_PATH):
         raise HTTPException(status_code=500, detail="Signature file not found")
@@ -78,9 +80,13 @@ async def send_email(
 
     # Handle file attachments
     if file_url:
-        if isinstance(file_url, str) or isinstance(file_url, HttpUrl):
+        # Simplified to check for str and HttpUrl inclusivity within lists safely:
+        if isinstance(file_url, (str, HttpUrl)):
             file_url = [file_url]
-        elif not all(isinstance(url, (str, HttpUrl)) for url in file_url):
+        elif isinstance(file_url, list):
+            if not all(isinstance(url, (str, HttpUrl)) for url in file_url):
+                raise HTTPException(status_code=400, detail="Invalid file URL format")
+        else:
             raise HTTPException(status_code=400, detail="Invalid file URL format")
 
         total_size = 0
