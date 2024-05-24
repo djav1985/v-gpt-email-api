@@ -78,7 +78,7 @@ async def send_email(
 
     # Handle file attachments
     if file_url:
-        if isinstance(file_url, str):
+        if isinstance(file_url, (str, HttpUrl)):
             file_url = [file_url]
 
         total_size = 0
