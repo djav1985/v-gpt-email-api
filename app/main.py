@@ -1,10 +1,14 @@
 import os
 
+from dotenv import load_dotenv
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from routes.send_email import send_router
 from routes.root import root_router
+
+load_dotenv()
 
 # FastAPI application instance setup
 app = FastAPI(
