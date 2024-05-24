@@ -1,119 +1,85 @@
-![Header](/images/header.png)
+Email Management API
+This project is an Email Management API built using FastAPI that allows users to send emails with optional file attachments via HTTP endpoints.
 
-# v-gpt-email-api
+Features
+Send Emails: Send emails to one or multiple recipients. You can also attach files to these emails by providing URLs to the files.
+Static File Serving: Serve static files like HTML, CSS, and JavaScript from a specified directory.
+API Key Authentication: Secure the email sending endpoint with an API key.
+Project Structure
+config.ts: Configuration modification function.
+root.py: Handles the root endpoint to serve the index.html file.
+send_email.py: Contains the endpoint and logic for sending emails.
+dependencies.py: Helper functions and dependencies for sending emails.
+main.py: Main FastAPI application setup and router inclusion.
+models.py: Pydantic models for request validation.
+.gitattributes: Configuration for Git to handle end-of-line normalization.
+docker-compose.yml: Docker Compose configuration to run the application in a containerized environment.
+Requirements
+Docker
+Docker Compose
+Getting Started
+Clone the repository:
 
-## Description
-This FastAPI application provides robust email management capabilities, allowing users to interact with their email accounts for various functionalities like listing folders, reading, sending, and organizing emails. Openapi spec at /openapi.json
+git clone https://your-repository-url.git
+cd your-repository-folder
+Running the Application Locally
+Use Docker Compose to build and run the application:
 
-## Features
-- **List Email Folders**: Retrieve all folders from an email account.
-- **List Emails**: Fetch emails from a specified folder.
-- **Read Emails**: Get detailed information about specific emails.
-- **Send Emails**: Compose and send emails from a specified account.
-- **Move Emails**: Move emails between folders.
-- **Reply to Emails**: Send replies to received emails.
+docker-compose up -d
+The API will be available at http://localhost:8050.
 
-## Installation
+Environment Variables
+You need to set the following environment variables in the docker-compose.yml file:
 
-### Prerequisites
-- Docker
-- Python 3.10+
-- pip
+BASE_URL: The base URL for the API.
+API_KEY: API key for connecting to the API.
+WORKERS: Uvicorn workers count.
+UVICORN_CONCURRENCY: Maximum concurrent connections.
+ACCOUNT_EMAIL: Email address for sending emails.
+ACCOUNT_PASSWORD: Password for the email account.
+ACCOUNT_SMTP_SERVER: SMTP server address.
+ACCOUNT_SMTP_PORT: SMTP server port.
+ACCOUNT_REPLY_TO: Reply-to email address.
+File Attachments
+Supported file types for attachments are:
 
-### Clone the Repository
-```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
-```
+.zip
+.txt
+.docx
+.png
+.webp
+.jpg
+.jpeg
+.pdf
+.rtf
+The maximum attachment size is 20MB.
 
-### Environment Setup
-Create a `.env` file at the root of your project directory and populate it with necessary environment variables:
+API Endpoints
+Send Email
+POST /send_email
 
-```makefile
-BASE_URL=http://localhost
-API_KEY=your_api_key
-ACCOUNTS='[{"email": "user1@example.com", "password": "password1", "imap_server": "imap.example.com", "imap_port": 993, "smtp_server": "smtp.example.com", "smtp_port": 587}, {"email": "user2@example.com", "password": "password2", "imap_server": "imap.example2.com", "imap_port": 993, "smtp_server": "smtp.example2.com", "smtp_port": 587}]'
-```
+Send an email with optional file attachments.
 
-### Build and Run with Docker
-```bash
-docker-compose up --build
-```
+Request Body:
 
-## Usage
-Once the application is running, you can interact with the API through the following endpoints:
-
-### API Endpoints
-
-#### List Folders
-- **POST /list_folders**
-- Description: Lists all folders in the specified email account.
-- Payload:
-```json
 {
-  "account": "user@example.com"
+  "to_address": "recipient@example.com",
+  "subject": "Email Subject",
+  "body": "Email body content.",
+  "file_url": [
+    "https://example.com/file1.pdf",
+    "https://example.com/file2.png"
+  ]
 }
-```
+Response:
 
-#### List Emails
-- **POST /list_emails**
-- Description: Lists emails from a specified folder.
-- Payload:
-```json
 {
-  "account": "user@example.com",
-  "folder": "Inbox",
-  "limit": 10
+  "message": "Email sent successfully"
 }
-```
+Root Endpoint
+GET /
 
-#### Read Emails
-- **POST /read_emails**
-- Description: Retrieves detailed information about specified emails.
-- Payload:
-```json
-{
-  "account": "user@example.com",
-  "folder": "Inbox",
-  "email_ids": "1,2,3"
-}
-```
+Serves the index.html file.
 
-#### Send Email
-- **POST /send_email**
-- Description: Sends an email from the specified account.
-- Payload:
-```json
-{
-  "account": "user@example.com",
-  "to_address": "receiver@example.com",
-  "subject": "Hello",
-  "body": "Hello, this is a test email."
-}
-```
-
-#### Move Emails
-- **POST /move_emails**
-- Description: Moves specified emails to a different folder.
-- Payload:
-```json
-{
-  "account": "user@example.com",
-  "folder": "Inbox",
-  "email_ids": "4,5",
-  "target_folder": "Archived"
-}
-```
-
-#### Reply to Email
-- **POST /reply_email**
-- Description: Sends a reply to an email.
-- Payload:
-```json
-{
-  "account": "user@example.com",
-  "folder": "Inbox",
-  "email_id": "6",
-  "reply_body": "Thanks for your email."
-}
-```
+License
+This project is licensed under the MIT License.
