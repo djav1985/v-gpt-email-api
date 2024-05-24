@@ -11,7 +11,7 @@ app = FastAPI(
     title="Email Management API",
     version="0.1.0",
     description="A FastAPI to send emails",
-    servers=[{"url": os.getenv("BASE_URL", ""), "description": "Base API server"}]
+    servers=[{"url": os.getenv("BASE_URL", ""), "description": "Base API server"}],
 )
 
 # Include routers for feature modules

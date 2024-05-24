@@ -4,14 +4,12 @@ FROM python:3.9-slim as base
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies and clean up apt cache
-RUN apt-get update && \
-    apt-get install -y \
+# Install system dependencies and clean up apt cache in a single RUN command to reduce layers
+RUN apt-get update && apt-get install -y \
     gcc \
     libffi-dev \
     libssl-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy only the requirements file
 COPY ./app/requirements.txt /app/

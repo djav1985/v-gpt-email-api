@@ -17,7 +17,7 @@ ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
 ACCOUNT_SMTP_SERVER = os.getenv("ACCOUNT_SMTP_SERVER")
 ACCOUNT_SMTP_PORT = int(os.getenv("ACCOUNT_SMTP_PORT"))
 ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
-SIGNATURE_FILE = os.getenv("SIGNATURE_FILE", "signature.html")
+SIGNATURE_PATH = "/app/sig/signature.html"
 
 ALLOWED_FILE_TYPES = {
     ".zip",
@@ -57,6 +57,9 @@ async def send_email(
     body: str,
     file_url: Optional[Union[str, List[str]]] = None,
 ):
+    if not os.path.exists(SIGNATURE_PATH):
+        raise HTTPException(status_code=500, detail="Signature file not found")
+
     msg = MIMEMultipart()
     msg["From"] = ACCOUNT_EMAIL
     msg["To"] = ", ".join(to_address) if isinstance(to_address, list) else to_address
@@ -64,8 +67,8 @@ async def send_email(
     msg["Reply-To"] = ACCOUNT_REPLY_TO
 
     # Add the email body and signature
-    with open(SIGNATURE_FILE, "r") as file:
-        signature = file.read()
+    async with aiofiles.open(SIGNATURE_PATH, "r") as file:
+        signature = await file.read()
     msg.attach(MIMEText(body + signature, "html"))
 
     # Handle file attachments
