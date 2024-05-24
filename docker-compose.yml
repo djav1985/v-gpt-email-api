@@ -13,8 +13,11 @@ services:
       API_KEY: Optional API key to connect to api
       WORKERS: 1 #uvicorn workers 1 should be enough for personal use
       UVICORN_CONCURRENCY: 32 #this controls the mac connections. Anything over the API_concurrancy value is put in query pool. Anything over this number is rejected.
-      ACCOUNTS: >
-        [
-          {"email": "user1@example.com", "password": "password1", "imap_server": "imap.example.com", "imap_port": 993, "smtp_server": "smtp.example.com", "smtp_port": 587},
-          {"email": "user2@example.com", "password": "password2", "imap_server": "imap.example2.com", "imap_port": 993, "smtp_server": "smtp.example2.com", "smtp_port": 587}
-        ]
+      ACCOUNT_EMAIL: user1@example.com
+      ACCOUNT_PASSWORD: password1
+      ACCOUNT_IMAP_SERVER: imap.example.com
+      ACCOUNT_IMAP_PORT: 993
+      ACCOUNT_SMTP_SERVER: smtp.example.com
+      ACCOUNT_SMTP_PORT: 587
+      ACCOUNT_REPLY_TO: replyto@example.com
+      SIGNATURE_URL: https://example.com/signature.html

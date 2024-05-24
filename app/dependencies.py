@@ -1,116 +1,112 @@
 import os
-import json
-import re
-from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from aiosmtplib import SMTP, SMTPException
-from aioimaplib import IMAP4_SSL
-from email import message_from_bytes, policy
-from email.header import decode_header
+import aiosmtplib
+import aiofiles
+import aiohttp
+import tempfile
+import shutil
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from typing import Union, List, Optional
+from pydantic import EmailStr
+from fastapi import HTTPException
+
+ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
+ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
+ACCOUNT_SMTP_SERVER = os.getenv("ACCOUNT_SMTP_SERVER")
+ACCOUNT_SMTP_PORT = int(os.getenv("ACCOUNT_SMTP_PORT"))
+ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
+SIGNATURE_FILE = os.getenv("SIGNATURE_FILE", "signature.html")
+
+ALLOWED_FILE_TYPES = {
+    ".zip",
+    ".txt",
+    ".docx",
+    ".png",
+    ".webp",
+    ".jpg",
+    ".jpeg",
+    ".pdf",
+    ".rtf",
+}
+MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 
 
-def validate_account_sync(email: str):
-    accounts = json.loads(os.getenv("ACCOUNTS", "[]"))
-    account_details = next((acc for acc in accounts if acc["email"] == email), None)
-    if not account_details:
-        raise ValueError("Account not found")
-    return account_details
-
-
-async def get_account_details(email: str):
-    accounts = json.loads(os.getenv("ACCOUNTS", "[]"))
-    account_details = next((acc for acc in accounts if acc["email"] == email), None)
-    if not account_details:
-        raise HTTPException(status_code=404, detail="Account not found")
-    return account_details
-
-
-async def send_email_utility(account_details, to_address, email_message):
-    try:
-        async with SMTP(
-            hostname=account_details["smtp_server"], port=account_details["smtp_port"]
-        ) as server:
-            await server.starttls()
-            await server.login(account_details["email"], account_details["password"])
-            await server.sendmail(
-                account_details["email"], to_address, email_message.as_string()
+async def fetch_file(session, url, temp_dir):
+    async with session.get(url) as response:
+        if response.status != 200:
+            raise HTTPException(
+                status_code=response.status,
+                detail=f"Failed to download file from {url}",
             )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
+
+        filename = url.split("/")[-1]
+        file_path = os.path.join(temp_dir, filename)
+
+        async with aiofiles.open(file_path, "wb") as out_file:
+            content = await response.read()
+            await out_file.write(content)
+
+        return file_path
 
 
-async def fetch_email(account_details, folder, email_id):
-    mail = IMAP4_SSL(account_details["imap_server"])
-    try:
-        await mail.wait_hello_from_server()
-        await mail.login(account_details["email"], account_details["password"])
-        await mail.select(folder)
-        result, data = await mail.uid("fetch", email_id, "(RFC822)")
-        if result != "OK":
-            raise HTTPException(status_code=500, detail="Failed to fetch the email")
-        if not data or not isinstance(data[0], tuple):
-            raise HTTPException(status_code=500, detail="Unexpected data format")
-        return data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching email: {str(e)}")
-    finally:
-        await mail.logout()
-
-
-async def get_email_body(message):
-    try:
-        if message.is_multipart():
-            for part in message.walk():
-                if (
-                    part.get_content_type() == "text/plain"
-                    and part.get("Content-Disposition") is None
-                ):
-                    return part.get_payload(decode=True).decode(
-                        "utf-8", errors="ignore"
-                    )
-                elif (
-                    part.get_content_type() == "text/html"
-                    and part.get("Content-Disposition") is None
-                ):
-                    return part.get_payload(decode=True).decode(
-                        "utf-8", errors="ignore"
-                    )
-        else:
-            return message.get_payload(decode=True).decode("utf-8", errors="ignore")
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error decoding email body: {str(e)}"
-        )
-
-
-async def decode_header_value(val):
-    try:
-        if val is None:
-            return None
-
-        decoded_parts = decode_header(val)
-        decoded_string = ""
-        for part, encoding in decoded_parts:
-            if isinstance(part, bytes):
-                part = part.decode(encoding if encoding else "utf-8", errors="ignore")
-            part = re.sub(r"[\ud800-\udfff]", "", part)
-            decoded_string += part
-        return decoded_string
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error decoding header value: {str(e)}"
-        )
-
-
-async def get_api_key(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+async def send_email(
+    to_address: Union[EmailStr, List[EmailStr]],
+    subject: str,
+    body: str,
+    file_url: Optional[Union[str, List[str]]] = None,
 ):
-    try:
-        api_key = os.getenv("API_KEY")
-        if api_key and (not credentials or credentials.credentials != api_key):
-            raise HTTPException(status_code=403, detail="Invalid or missing API key")
-        return credentials.credentials if credentials else None
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error retrieving API key: {str(e)}"
-        )
+    msg = MIMEMultipart()
+    msg["From"] = ACCOUNT_EMAIL
+    msg["To"] = ", ".join(to_address) if isinstance(to_address, list) else to_address
+    msg["Subject"] = subject
+    msg["Reply-To"] = ACCOUNT_REPLY_TO
+
+    # Add the email body and signature
+    with open(SIGNATURE_FILE, "r") as file:
+        signature = file.read()
+    msg.attach(MIMEText(body + signature, "html"))
+
+    # Handle file attachments
+    if file_url:
+        if isinstance(file_url, str):
+            file_url = [file_url]
+
+        total_size = 0
+        temp_dir = tempfile.mkdtemp()
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                for url in file_url:
+                    file_path = await fetch_file(session, url, temp_dir)
+                    file_size = os.path.getsize(file_path)
+
+                    if file_size + total_size > MAX_ATTACHMENT_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail="Total attachment size exceeds 20MB limit",
+                        )
+
+                    total_size += file_size
+                    part = MIMEBase("application", "octet-stream")
+                    with open(file_path, "rb") as file:
+                        part.set_payload(file.read())
+
+                    encoders.encode_base64(part)
+                    part.add_header(
+                        "Content-Disposition",
+                        f"attachment; filename={os.path.basename(file_path)}",
+                    )
+                    msg.attach(part)
+        finally:
+            shutil.rmtree(temp_dir)
+
+    await aiosmtplib.send(
+        msg,
+        hostname=ACCOUNT_SMTP_SERVER,
+        port=ACCOUNT_SMTP_PORT,
+        username=ACCOUNT_EMAIL,
+        password=ACCOUNT_PASSWORD,
+        use_tls=True,
+    )
