@@ -1,6 +1,7 @@
 from aioimaplib import aioimaplib, IMAP4_SSL
 from fastapi import APIRouter, Depends, HTTPException
 from email import message_from_bytes
+from typing import Dict
 from models import ListFoldersAndEmailsRequest
 from dependencies import (
     get_api_key,
@@ -17,24 +18,19 @@ async def list_folders_and_emails(
 ):
     try:
         account_details = await get_account_details(request.account)
-        print(f"Account details fetched: {account_details}")
     except HTTPException as e:
-        print(f"Error fetching account details: {e.detail}")
         raise HTTPException(status_code=404, detail="Account not found")
 
-    mail = aioimaplib.IMAP4_SSL(account_details["imap_server"])
+    mail = IMAP4_SSL(account_details["imap_server"])
     try:
         await mail.wait_hello_from_server()
         await mail.login(account_details["email"], account_details["password"])
 
         if request.action == "folders":
             # List folders
-            status, folder_list = await mail.list()
-            print(f"IMAP server response for list folders: {status}, {folder_list}")
+            status, folder_list = await mail.list("", "*")
             if status != "OK":
-                raise HTTPException(
-                    status_code=500, detail=f"Failed to list folders: {status}"
-                )
+                raise HTTPException(status_code=500, detail="Failed to list folders")
 
             folders = [
                 " ".join(folder.decode("utf-8").split(" ")[2:]).strip('"')
@@ -44,17 +40,14 @@ async def list_folders_and_emails(
         elif request.action == "emails":
             # List emails in the specified folder
             await mail.select(request.folder)
-            status, data = await mail.search("ALL")
-            print(f"IMAP server response for search emails: {status}, {data}")
+            status, data = await mail.uid("search", "ALL")
             if status != "OK":
-                raise HTTPException(
-                    status_code=500, detail=f"Failed to search emails: {status}"
-                )
+                raise HTTPException(status_code=500, detail="Failed to search emails")
 
             email_ids = data[0].split()[-request.limit :]
             emails = []
             for email_id in email_ids:
-                typ, email_data = await mail.fetch(email_id, "(RFC822)")
+                typ, email_data = await mail.uid("fetch", email_id, "(RFC822)")
                 if typ != "OK":
                     continue
 
@@ -85,7 +78,6 @@ async def list_folders_and_emails(
         else:
             raise HTTPException(status_code=400, detail="Invalid action specified")
     except Exception as e:
-        print(f"Error occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     finally:
         await mail.logout()
