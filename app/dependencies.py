@@ -4,13 +4,16 @@ import aiofiles
 import aiohttp
 import tempfile
 import shutil
+
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+
 from typing import Union, List, Optional
-from pydantic import EmailStr
-from fastapi import HTTPException, Depends, HTTPBearer
 
 ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
 ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
