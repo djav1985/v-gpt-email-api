@@ -1,14 +1,13 @@
 import os
 import json
 import re
-import aiosmtplib
-
-from aioimaplib import aioimaplib, IMAP4_SSL
-
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from aiosmtplib import SMTP, SMTPException
+from aioimaplib import IMAP4_SSL
 from email import message_from_bytes, policy
 from email.header import decode_header
+
 
 def validate_account_sync(email: str):
     accounts = json.loads(os.getenv("ACCOUNTS", "[]"))
@@ -17,6 +16,7 @@ def validate_account_sync(email: str):
         raise ValueError("Account not found")
     return account_details
 
+
 async def get_account_details(email: str):
     accounts = json.loads(os.getenv("ACCOUNTS", "[]"))
     account_details = next((acc for acc in accounts if acc["email"] == email), None)
@@ -24,9 +24,10 @@ async def get_account_details(email: str):
         raise HTTPException(status_code=404, detail="Account not found")
     return account_details
 
+
 async def send_email_utility(account_details, to_address, email_message):
     try:
-        async with aiosmtplib.SMTP(
+        async with SMTP(
             hostname=account_details["smtp_server"], port=account_details["smtp_port"]
         ) as server:
             await server.starttls()
@@ -46,9 +47,9 @@ async def fetch_email(account_details, folder, email_id):
         result, data = await mail.uid("fetch", email_id, "(RFC822)")
         if result != "OK":
             raise HTTPException(status_code=500, detail="Failed to fetch the email")
-        if not data or not isinstance(data[0], tuple):  # Additional check
+        if not data or not isinstance(data[0], tuple):
             raise HTTPException(status_code=500, detail="Unexpected data format")
-        return data[0][1]  # Return the actual email content
+        return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching email: {str(e)}")
     finally:
