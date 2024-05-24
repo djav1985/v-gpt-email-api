@@ -1,7 +1,6 @@
-#models.py
+# models.py
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-
 
 class SendEmailRequest(BaseModel):
     to_address: str = Field(
