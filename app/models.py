@@ -29,13 +29,13 @@ class SendEmailRequest(BaseModel):
     @validator("to_address")
     def validate_to_address(cls, value):
         if isinstance(value, str):
-            return EmailStr.validate(value)
+            EmailStr.validate(value)
         elif isinstance(value, list):
             for email in value:
                 EmailStr.validate(email)
-            return value
         else:
             raise ValueError("Invalid email address format")
+        return value
 
 
 class ListFoldersAndEmailsRequest(BaseModel):
