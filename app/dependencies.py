@@ -78,8 +78,10 @@ async def send_email(
 
     # Handle file attachments
     if file_url:
-        if isinstance(file_url, (str, HttpUrl)):
+        if isinstance(file_url, str) or isinstance(file_url, HttpUrl):
             file_url = [file_url]
+        elif not all(isinstance(url, (str, HttpUrl)) for url in file_url):
+            raise HTTPException(status_code=400, detail="Invalid file URL format")
 
         total_size = 0
         temp_dir = tempfile.mkdtemp()
