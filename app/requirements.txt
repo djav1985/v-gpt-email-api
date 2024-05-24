@@ -1,5 +1,7 @@
-fastapi==0.110.1
-uvicorn==0.29.0
-gunicorn==22.0.0
-pydantic==2.6.1
-email-validator==2.0
+fastapi
+uvicorn
+pydantic
+aiosmtplib
+aiohttp
+aiofiles
+python-dotenv
