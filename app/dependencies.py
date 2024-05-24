@@ -4,13 +4,17 @@ import aiofiles
 import aiohttp
 import tempfile
 import shutil
+
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+
 from typing import Union, List, Optional
 from pydantic import EmailStr
-from fastapi import HTTPException
 
 ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
 ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
@@ -111,7 +115,7 @@ async def send_email(
         port=ACCOUNT_SMTP_PORT,
         username=ACCOUNT_EMAIL,
         password=ACCOUNT_PASSWORD,
-        use_tls=True,
+        start_tls=True,  # Use start_tls instead of use_tls
     )
 
 
@@ -119,8 +123,8 @@ async def send_email(
 async def get_api_key(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ):
-    if os.getenv("MEMORIES_API_KEY") and (
-        not credentials or credentials.credentials != os.getenv("MEMORIES_API_KEY")
+    if os.getenv("API_KEY") and (
+        not credentials or credentials.credentials != os.getenv("API_KEY")
     ):
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
     return credentials.credentials if credentials else None
