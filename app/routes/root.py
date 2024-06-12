@@ -10,3 +10,18 @@ root_router = APIRouter()
 @root_router.get("/", include_in_schema=False)
 async def root():
     return FileResponse("/app/public/index.html")
+
+
+@root_router.get("/profile.png", include_in_schema=False)
+async def profile():
+    return FileResponse("/app/public/profile.png")
+
+
+@root_router.get("/brushed-alum.png", include_in_schema=False)
+async def brushedalum():
+    return FileResponse("/app/public/brushed-alum.png")
+
+
+@root_router.get("/glass.png", include_in_schema=False)
+async def rglass():
+    return FileResponse("/app/public/glass.png")
