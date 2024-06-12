@@ -12,7 +12,7 @@ app = FastAPI(
     title="Email Management API",
     version="0.1.0",
     description="A FastAPI to send emails",
-    root_path=os.getenv("ROOT_PATH", "/"),
+    root_path=os.getenv("ROOT_PATH", ""),
     servers=[{"url": os.getenv("BASE_URL", ""), "description": "Base API server"}],
 )
 
@@ -21,8 +21,4 @@ app.include_router(send_router)
 app.include_router(root_router)
 
 # Serve static files (HTML, CSS, JS, images)
-app.mount(
-    f"{os.getenv('ROOT_PATH', '')}/static",
-    StaticFiles(directory="/app/public"),
-    name="static",
-)
+app.mount("/static", StaticFiles(directory="/app/public"), name="static")
