@@ -2,7 +2,6 @@
 import os
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 
 from routes.send_email import send_router
 from routes.root import root_router
@@ -19,6 +18,3 @@ app = FastAPI(
 # Include routers for feature modules
 app.include_router(send_router)
 app.include_router(root_router)
-
-# Serve static files (HTML, CSS, JS, images)
-app.mount("/static", StaticFiles(directory="/app/public"), name="static")
