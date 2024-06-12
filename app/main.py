@@ -21,4 +21,8 @@ app.include_router(send_router)
 app.include_router(root_router)
 
 # Serve static files (HTML, CSS, JS, images)
-app.mount("/static", StaticFiles(directory="/app/public"), name="static")
+app.mount(
+    f"{os.getenv('ROOT_PATH', '/')}/static",
+    StaticFiles(directory="/app/public"),
+    name="static",
+)
