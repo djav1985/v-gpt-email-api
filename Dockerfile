@@ -1,21 +1,26 @@
-# Use a slimmer Python image as base
-FROM python:3.9-slim as base
+# Build stage
+FROM python:3.10-slim as builder
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies and clean up apt cache in a single RUN command to reduce layers
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libffi-dev \
-    libssl-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Copy the requirements file and cache
+COPY /cache /app/cache
+COPY requirements.txt /app
 
-# Copy only the requirements file
-COPY ./app/requirements.txt /app/
+# Install Python dependencies in a virtual environment
+RUN python -m venv /app/venv && \
+    . /app/venv/bin/activate && \
+    pip install --no-index --find-links /app/cache -r requirements.txt
 
-# Install Python dependencies with pip cache to speed up builds
-RUN --mount=type=cache,target=/root/.cache/pip pip install --no-cache-dir -r requirements.txt
+# Final stage
+FROM python:3.10-slim
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder /app/venv /app/venv
 
 # Copy the rest of the application
 COPY ./app /app
@@ -26,6 +31,7 @@ EXPOSE 8040
 # Define environment variables
 ENV WORKERS=2
 ENV UVICORN_CONCURRENCY=32
+ENV PATH="/app/venv/bin:$PATH"
 
 # Set the command to run your FastAPI application with Uvicorn and environment variables
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 8040 --workers $WORKERS --limit-concurrency $UVICORN_CONCURRENCY --timeout-keep-alive 32"]
