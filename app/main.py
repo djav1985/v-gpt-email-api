@@ -4,7 +4,6 @@ import os
 from fastapi import FastAPI
 
 from routes.send_email import send_router
-from routes.root import root_router
 
 # FastAPI application instance setup
 app = FastAPI(
