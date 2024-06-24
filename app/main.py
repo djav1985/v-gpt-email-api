@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from routes.send_email import send_router
 
+
 # FastAPI application instance setup
 app = FastAPI(
     title="Email Management API",
