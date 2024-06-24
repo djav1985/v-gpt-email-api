@@ -17,4 +17,3 @@ app = FastAPI(
 
 # Include routers for feature modules
 app.include_router(send_router)
-app.include_router(root_router)
