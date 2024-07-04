@@ -4,7 +4,7 @@ from dependencies import send_email, get_api_key
 
 send_router = APIRouter()
 
-@send_router.post("/", operation_id="send_email")
+@send_router.post(f"{os.getenv('ROOT_PATH', '/')}", operation_id="send_email")
 async def send_email_endpoint(
     request: SendEmailRequest, api_key: str = Depends(get_api_key)
 ):
