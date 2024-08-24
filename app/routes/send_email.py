@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from models import SendEmailRequest
 from dependencies import send_email, get_api_key
