@@ -25,6 +25,7 @@ ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
 ACCOUNT_SMTP_SERVER = os.getenv("ACCOUNT_SMTP_SERVER")
 ACCOUNT_SMTP_PORT = os.getenv("ACCOUNT_SMTP_PORT")
 ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
+FROM_NAME = os.getenv("FROM_NAME", "Your Friendly AI") 
 SIGNATURE_PATH = "/app/sig/signature.html"
 
 # Validate environment variables
@@ -82,7 +83,7 @@ async def send_email(
     msg = MIMEMultipart()
     # Convert to_address string into a list of email addresses
     to_addresses = [address.strip() for address in to_address.split(",")]
-    msg["From"] = ACCOUNT_EMAIL
+    msg["From"] = f"{FROM_NAME} <{ACCOUNT_EMAIL}>"
     msg["To"] = ", ".join(to_addresses)
     msg["Subject"] = subject
     msg["Reply-To"] = ACCOUNT_REPLY_TO
