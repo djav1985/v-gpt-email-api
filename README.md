@@ -33,8 +33,8 @@
 - [🚀 Getting Started](#-getting-started)
   - [⚙️ Installation](#️-installation)
   - [🤖 Usage](#-usage)
-  - [🧪 Tests](#-tests)
-- [🛠 Project Roadmap](#-project-roadmap)
+    - [From `docker-compose`](#from-docker-compose)
+- [🛠 Project Changelog](#-project-changelog)
 - [🎗 License](#-license)
 </details>
 <hr>
@@ -54,7 +54,6 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 | 📄 | **Documentation** | Comprehensive documentation including a `README` file, inline comments, and docstrings. Key project files like `requirements.txt`, `Dockerfile`, and `docker-compose.yml` are well-documented to assist in deployment and integration. |
 | 🔌 | **Integrations**  | Integrates key libraries such as FastAPI, Uvicorn, Pydantic for data validation, aiosmtplib for email, and aiohttp for HTTP requests. Environment variables managed using `python-dotenv`. Docker integration for containerization. |
 | 🧩 | **Modularity**    | The codebase is highly modular with separate files for dependencies, models, and routes, facilitating reusability and easy maintenance. Logical separation of concerns across the application layers. |
-| 🧪 | **Testing**       | Testing tools and frameworks are not explicitly listed in the provided information, suggesting a potential area for improvement in establishing a robust testing strategy. |
 | ⚡️  | **Performance**   | High efficiency and performance due to asynchronous programming with FastAPI and Uvicorn. Docker ensures optimized resource usage by providing isolated environments. |
 | 🛡️ | **Security**      | Uses environment variables for sensitive configurations, API key validation for access control, and enforces file size and type constraints. Prioritizes secure email transmission and data protection. |
 | 📦 | **Dependencies**  | Key dependencies include `aiohttp`, `pydantic`, `uvicorn`, `fastapi`, `aiosmtplib`, `python-dotenv`, and `aiofiles`. Managed using `requirements.txt` for easy installation and updates. |
@@ -123,49 +122,65 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 
 * **Python**: `version 3.10`
 
+
 ### ⚙️ Installation
 
-<h4>From <code>source</code></h4>
+1. **Download the `docker-compose.yml` file**:  
+   Save the provided `docker-compose.yml` file to your project directory.
 
-> 1. Clone the v-gpt-email-api repository:
->
-> ```console
-> $ git clone ../v-gpt-email-api
-> ```
->
-> 2. Change to the project directory:
-> ```console
-> $ cd v-gpt-email-api
-> ```
->
-> 3. Install the dependencies:
-> ```console
-> $ pip install -r requirements.txt
-> ```
+2. **Edit Environment Variables**:  
+   Open the `docker-compose.yml` file and set the environment variables according to your setup:
+
+   ```yaml
+    environment:
+      BASE_URL: https://api.servicesbyv.com # Set this to your actual base URL
+      ROOT_PATH: /email
+      API_KEY: Optional API key to connect to api
+      WORKERS: 1 #uvicorn workers 1 should be enough for personal use
+      UVICORN_CONCURRENCY: 32 #this controls the mac connections. Anything over the API_concurrancy value is put in query pool. Anything over this number is rejected.
+      ACCOUNT_EMAIL: user1@example.com
+      ACCOUNT_PASSWORD: password1
+      ACCOUNT_IMAP_SERVER: imap.example.com
+      ACCOUNT_IMAP_PORT: 993
+      ACCOUNT_SMTP_SERVER: smtp.example.com
+      ACCOUNT_SMTP_PORT: 587
+      ACCOUNT_REPLY_TO: replyto@example.com
+   ```
+
+3. **Run the Docker Compose**:  
+   Use the following command to start the service:
+
+   ```bash
+   docker-compose up
+   ```
+
+4. **(Optional) Run in Detached Mode**:  
+   To run the containers in the background, use:
+
+   ```bash
+   docker-compose up -d
+   ```
 
 ### 🤖 Usage
 
-<h4>From <code>source</code></h4>
+#### From `docker-compose`
 
-> Run v-gpt-email-api using the command below:
-> ```console
-> $ python main.py
-> ```
+1. **Access the OpenAPI Specifications**:  
+   To get the OpenAPI specifications and integrate with your AI tool, navigate to:
 
-### 🧪 Tests
+   ```
+   BASE_URL/openapi.json
+   ```
 
-> Run the test suite using the command below:
-> ```console
-> $ pytest
-> ```
-
+   Replace `BASE_URL` with the actual URL of your application (e.g., `https://api.servicesbyv.com/email/openapi.json`).
+   
 ---
 
-## 🛠 Project Roadmap
+## 🛠 Project Changelog
 
-- [X] `► INSERT-TASK-1`
-- [ ] `► INSERT-TASK-2`
-- [ ] `► ...`
+-  `► `
+-  `► `
+-  `► `
 
 ---
 

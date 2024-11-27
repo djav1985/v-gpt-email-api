@@ -1,7 +1,7 @@
-fastapi
-uvicorn
-pydantic
-aiosmtplib
-aiohttp
-aiofiles
-python-dotenv
+fastapi==0.115.5
+uvicorn==0.32.1
+pydantic==2.10.2
+aiosmtplib==3.0.2
+aiohttp==3.11.7
+aiofiles==24.1.0
+python-dotenv==1.0.1
