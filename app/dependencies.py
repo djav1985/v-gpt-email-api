@@ -73,16 +73,12 @@ async def fetch_file(session, url, temp_dir) -> str:
 
         return file_path
 
-
 async def send_email(
     to_address: str,
     subject: str,
     body: str,
     file_url: Optional[str] = None,
 ) -> None:
-    if not os.path.exists(SIGNATURE_PATH) or not os.access(SIGNATURE_PATH, os.R_OK):
-        raise HTTPException(status_code=500, detail="Signature file not found or is not readable")
-
     msg = MIMEMultipart()
     # Convert to_address string into a list of email addresses
     to_addresses = [address.strip() for address in to_address.split(",")]
@@ -91,9 +87,14 @@ async def send_email(
     msg["Subject"] = subject
     msg["Reply-To"] = ACCOUNT_REPLY_TO
 
-    # Add the email body and signature
-    async with aiofiles.open(SIGNATURE_PATH, "r") as file:
-        signature = await file.read()
+    # Add the email body and optional signature
+    signature = ""
+    if os.path.exists(SIGNATURE_PATH) and os.access(SIGNATURE_PATH, os.R_OK):
+        async with aiofiles.open(SIGNATURE_PATH, "r") as file:
+            signature = await file.read()
+    else:
+        print("Signature file not found or is not readable. Proceeding without it.")
+
     msg.attach(MIMEText(body + signature, "html"))
 
     # Handle file attachments
@@ -166,7 +167,6 @@ async def send_email(
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
-
 
 async def get_api_key(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
