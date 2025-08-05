@@ -25,7 +25,7 @@ COPY --from=builder /app/venv /app/venv
 # Copy the rest of the application
 COPY ./app /app
 
-# Expose port 8040 to the outside world
+# Expose port 8888 to the outside world
 EXPOSE 8888
 
 # Define environment variables

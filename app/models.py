@@ -1,11 +1,11 @@
 # models.py
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List
 
 class SendEmailRequest(BaseModel):
-    to_address: str = Field(
+    to_address: List[EmailStr] = Field(
         ...,
-        description="The recipient's email address or comma-separated list of email addresses.",
+        description="The recipient email addresses.",
     )
     subject: str = Field(..., description="The subject of the email.", max_length=255)
     body: str = Field(..., description="The body content of the email.")

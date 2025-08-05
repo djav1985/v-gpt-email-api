@@ -16,7 +16,8 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
-from typing import Optional
+from typing import Optional, List
+from pydantic import EmailStr
 
 
 # Environment variables
@@ -30,7 +31,7 @@ SIGNATURE_PATH = "/app/sig/signature.html"
 
 # Validate environment variables
 if not all([ACCOUNT_EMAIL, ACCOUNT_PASSWORD, ACCOUNT_SMTP_SERVER, ACCOUNT_SMTP_PORT]):
-    raise HTTPException(status_code=500, detail="SMTP configuration is incomplete")
+    raise RuntimeError("SMTP configuration is incomplete")
 
 ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
 
@@ -49,6 +50,19 @@ MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 
 
 async def fetch_file(session, url, temp_dir) -> str:
+    """Download a file from ``url`` into ``temp_dir``.
+
+    Args:
+        session: The ``aiohttp`` session used for the request.
+        url: The URL of the file to download.
+        temp_dir: Temporary directory where the file will be stored.
+
+    Returns:
+        The path to the downloaded file.
+
+    Raises:
+        HTTPException: If the file type is disallowed or the download fails.
+    """
     filename = url.split("/")[-1]
     _, file_extension = os.path.splitext(filename)
 
@@ -75,14 +89,23 @@ async def fetch_file(session, url, temp_dir) -> str:
         return file_path
 
 async def send_email(
-    to_address: str,
+    to_addresses: List[EmailStr],
     subject: str,
     body: str,
     file_url: Optional[str] = None,
 ) -> None:
+    """Send an email with optional attachments.
+
+    Args:
+        to_addresses: List of recipient email addresses.
+        subject: Email subject line.
+        body: HTML body content of the email.
+        file_url: Optional comma-separated URLs of files to attach.
+
+    Raises:
+        HTTPException: If attachment handling fails or the SMTP server returns an error.
+    """
     msg = MIMEMultipart()
-    # Convert to_address string into a list of email addresses
-    to_addresses = [address.strip() for address in to_address.split(",")]
     msg["From"] = f"{FROM_NAME} <{ACCOUNT_EMAIL}>"
     msg["To"] = ", ".join(to_addresses)
     msg["Subject"] = subject
@@ -135,8 +158,9 @@ async def send_email(
                     )
                     part = MIMEBase(main_type, sub_type)
 
-                    with open(file_path, "rb") as file:
-                        part.set_payload(file.read())
+                    async with aiofiles.open(file_path, "rb") as file:
+                        content = await file.read()
+                        part.set_payload(content)
 
                     encoders.encode_base64(part)
                     part.add_header(
@@ -172,6 +196,17 @@ async def send_email(
 async def get_api_key(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
 ) -> Optional[str]:
+    """Validate the provided API key against the environment configuration.
+
+    Args:
+        credentials: Authorization credentials provided by the client.
+
+    Returns:
+        The API key string if validation succeeds, otherwise ``None``.
+
+    Raises:
+        HTTPException: If the provided key does not match the expected key.
+    """
     # Retrieve the API key from the environment
     expected_key = os.getenv("API_KEY")
 
