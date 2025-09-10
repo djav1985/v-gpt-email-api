@@ -25,14 +25,17 @@ ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
 ACCOUNT_SMTP_SERVER = os.getenv("ACCOUNT_SMTP_SERVER")
 ACCOUNT_SMTP_PORT = os.getenv("ACCOUNT_SMTP_PORT")
 ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
-FROM_NAME = os.getenv("FROM_NAME", "Your Friendly AI") 
+FROM_NAME = os.getenv("FROM_NAME", "Your Friendly AI")
 SIGNATURE_PATH = "/app/sig/signature.html"
 
-# Validate environment variables
-if not all([ACCOUNT_EMAIL, ACCOUNT_PASSWORD, ACCOUNT_SMTP_SERVER, ACCOUNT_SMTP_PORT]):
-    raise HTTPException(status_code=500, detail="SMTP configuration is incomplete")
 
-ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
+def validate_smtp_config() -> None:
+    """Validate required SMTP configuration at startup."""
+    global ACCOUNT_SMTP_PORT
+    if not all([ACCOUNT_EMAIL, ACCOUNT_PASSWORD, ACCOUNT_SMTP_SERVER, ACCOUNT_SMTP_PORT]):
+        raise RuntimeError("SMTP configuration is incomplete")
+
+    ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
 
 ALLOWED_FILE_TYPES = {
     ".zip",
@@ -135,8 +138,9 @@ async def send_email(
                     )
                     part = MIMEBase(main_type, sub_type)
 
-                    with open(file_path, "rb") as file:
-                        part.set_payload(file.read())
+                    async with aiofiles.open(file_path, "rb") as file:
+                        file_data = await file.read()
+                    part.set_payload(file_data)
 
                     encoders.encode_base64(part)
                     part.add_header(

@@ -9,11 +9,11 @@ services:
     ports:
       - "8050:8888" # Map port 80 of the container to port 8075 on the host
     environment:
-      BASE_URL: https://api.servicesbyv.com # Set this to your actual base URL
+      BASE_URL: https://api.servicesbyv.com  # Set this to your actual base URL
       ROOT_PATH: /email
-      API_KEY: Optional API key to connect to api
-      WORKERS: 1 #uvicorn workers 1 should be enough for personal use
-      UVICORN_CONCURRENCY: 32 #this controls the mac connections. Anything over the API_concurrancy value is put in query pool. Anything over this number is rejected.
+      API_KEY: "Optional API key to connect to api"  # Optional API key to connect to API
+      WORKERS: 1  # uvicorn workers; 1 should be enough for personal use
+      UVICORN_CONCURRENCY: 32  # Controls max connections. Requests over API_CONCURRENCY are queued or rejected.
       ACCOUNT_EMAIL: user1@example.com
       ACCOUNT_PASSWORD: password1
       ACCOUNT_IMAP_SERVER: imap.example.com

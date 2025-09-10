@@ -2,7 +2,8 @@
 import os
 from fastapi import FastAPI
 
-from routes.send_email import send_router
+from .dependencies import validate_smtp_config
+from .routes.send_email import send_router
 
 
 # FastAPI application instance setup
@@ -14,6 +15,12 @@ app = FastAPI(
     root_path_in_servers=False,
     servers=[{"url": f"{os.getenv('BASE_URL', '')}{os.getenv('ROOT_PATH', '/')}", "description": "Base API server"}]
 )
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    validate_smtp_config()
+
 
 # Include routers for feature modules
 app.include_router(send_router)
