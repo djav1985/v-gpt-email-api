@@ -131,13 +131,13 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 2. **Edit Environment Variables**:  
    Open the `docker-compose.yml` file and set the environment variables according to your setup:
 
-   ```yaml
+    ```yaml
     environment:
-      BASE_URL: https://api.servicesbyv.com # Set this to your actual base URL
+      BASE_URL: https://api.servicesbyv.com  # Set this to your actual base URL
       ROOT_PATH: /email
-      API_KEY: Optional API key to connect to api
-      WORKERS: 1 #uvicorn workers 1 should be enough for personal use
-      UVICORN_CONCURRENCY: 32 #this controls the mac connections. Anything over the API_concurrancy value is put in query pool. Anything over this number is rejected.
+      API_KEY: "Optional API key to connect to api"
+      WORKERS: 1  # uvicorn workers 1 should be enough for personal use
+      UVICORN_CONCURRENCY: 32  # this controls the max connections. Anything over the API_concurrency value is queued and excess rejected.
       ACCOUNT_EMAIL: user1@example.com
       ACCOUNT_PASSWORD: password1
       ACCOUNT_IMAP_SERVER: imap.example.com
@@ -145,7 +145,11 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
       ACCOUNT_SMTP_SERVER: smtp.example.com
       ACCOUNT_SMTP_PORT: 587
       ACCOUNT_REPLY_TO: replyto@example.com
-   ```
+    ```
+
+    The service validates the SMTP settings on startup. Ensure `ACCOUNT_EMAIL`,
+    `ACCOUNT_PASSWORD`, `ACCOUNT_SMTP_SERVER`, and `ACCOUNT_SMTP_PORT` are set
+    or the application will raise a runtime error at launch.
 
 3. **Run the Docker Compose**:  
    Use the following command to start the service:
