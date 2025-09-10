@@ -1,8 +1,9 @@
 # main,py
 import os
+import aiofiles
 from fastapi import FastAPI
 
-from .dependencies import validate_smtp_config
+from . import dependencies
 from .routes.send_email import send_router
 
 
@@ -19,7 +20,12 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    validate_smtp_config()
+    dependencies.settings = dependencies.Config()
+    try:
+        async with aiofiles.open("config/signature.txt", "r") as file:
+            dependencies.signature_text = await file.read()
+    except FileNotFoundError:
+        dependencies.signature_text = ""
 
 
 # Include routers for feature modules

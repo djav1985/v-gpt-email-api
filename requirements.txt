@@ -5,3 +5,4 @@ aiosmtplib==3.0.2
 aiohttp==3.11.7
 aiofiles==24.1.0
 python-dotenv==1.0.1
+pydantic-settings==2.6.1
