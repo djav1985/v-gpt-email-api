@@ -1,5 +1,3 @@
-import os
-import sys
 from pathlib import Path
 
 import aiofiles
@@ -8,17 +6,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-# Set required environment variables
-os.environ["ACCOUNT_EMAIL"] = "user@example.com"
-os.environ["ACCOUNT_PASSWORD"] = "password"
-os.environ["ACCOUNT_SMTP_SERVER"] = "smtp.example.com"
-os.environ["ACCOUNT_SMTP_PORT"] = "587"
-os.environ["ACCOUNT_IMAP_SERVER"] = "imap.example.com"
-os.environ["ACCOUNT_IMAP_PORT"] = "993"
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app import dependencies  # noqa: E402
+from app import dependencies
 
 
 @pytest.fixture(autouse=True)
@@ -185,20 +173,24 @@ async def test_send_email_smtp_exception(monkeypatch):
 # Existing API key tests retained
 
 
-def test_get_api_key_without_env(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_api_key_without_env(monkeypatch):
     monkeypatch.delenv("API_KEY", raising=False)
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
     assert dependencies.get_api_key(credentials=creds) == "token"
-    assert dependencies.get_api_key(credentials=None) is None
+    with pytest.raises(HTTPException):
+        dependencies.get_api_key(credentials=None)
 
 
-def test_get_api_key_with_env_valid(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_api_key_with_env_valid(monkeypatch):
     monkeypatch.setenv("API_KEY", "secret")
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="secret")
     assert dependencies.get_api_key(credentials=creds) == "secret"
 
 
-def test_get_api_key_with_env_invalid(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_api_key_with_env_invalid(monkeypatch):
     monkeypatch.setenv("API_KEY", "secret")
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wrong")
     with pytest.raises(HTTPException):

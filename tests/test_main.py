@@ -1,29 +1,23 @@
-import os
-import sys
-from pathlib import Path
 import logging
-from fastapi.testclient import TestClient
+from pathlib import Path
+
 import pytest
+from httpx import AsyncClient
+from asgi_lifespan import LifespanManager
 
-os.environ["ACCOUNT_EMAIL"] = "user@example.com"
-os.environ["ACCOUNT_PASSWORD"] = "password"
-os.environ["ACCOUNT_SMTP_SERVER"] = "smtp.example.com"
-os.environ["ACCOUNT_SMTP_PORT"] = "587"
-os.environ["ACCOUNT_IMAP_SERVER"] = "imap.example.com"
-os.environ["ACCOUNT_IMAP_PORT"] = "993"
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.main import app  # noqa: E402
-from app import dependencies  # noqa: E402
+from app.main import app
+from app import dependencies
 
 
-def test_startup_with_signature(tmp_path):
+@pytest.mark.asyncio
+async def test_startup_with_signature(tmp_path):
     sig_file = Path("config/signature.txt")
     original = sig_file.read_text() if sig_file.exists() else None
     sig_file.write_text("Hello")
-    with TestClient(app):
-        pass
+    async with LifespanManager(app):
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            client.headers["Authorization"] = "Bearer token"
+            await client.get("/openapi.json")
     assert dependencies.signature_text == "Hello"
     if original is not None:
         sig_file.write_text(original)
@@ -31,19 +25,24 @@ def test_startup_with_signature(tmp_path):
         sig_file.unlink()
 
 
-def test_startup_without_signature(tmp_path):
+@pytest.mark.asyncio
+async def test_startup_without_signature(tmp_path):
     sig_file = Path("config/signature.txt")
     temp = Path("config/signature.bak")
     if sig_file.exists():
         sig_file.rename(temp)
-    with TestClient(app):
-        pass
+    dependencies.signature_text = ""
+    async with LifespanManager(app):
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            client.headers["Authorization"] = "Bearer token"
+            await client.get("/openapi.json")
     assert dependencies.signature_text == ""
     if temp.exists():
         temp.rename(sig_file)
 
 
-def test_startup_does_not_configure_logging(monkeypatch):
+@pytest.mark.asyncio
+async def test_startup_does_not_configure_logging(monkeypatch):
     original_level = logging.getLogger().level
     called = False
 
@@ -52,14 +51,17 @@ def test_startup_does_not_configure_logging(monkeypatch):
         called = True
 
     monkeypatch.setattr(logging, "basicConfig", fake_basicConfig)
-    with TestClient(app):
-        pass
+    async with LifespanManager(app):
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            client.headers["Authorization"] = "Bearer token"
+            await client.get("/openapi.json")
     assert not called
     assert logging.getLogger().level == original_level
 
 
-def test_startup_missing_env(monkeypatch):
+@pytest.mark.asyncio
+async def test_startup_missing_env(monkeypatch):
     monkeypatch.delenv("ACCOUNT_EMAIL", raising=False)
     with pytest.raises(RuntimeError):
-        with TestClient(app):
+        async with LifespanManager(app):
             pass

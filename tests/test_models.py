@@ -1,38 +1,25 @@
 from datetime import datetime
-import os
-import sys
 
 import pytest
 from pydantic import ValidationError
 
-os.environ["ACCOUNT_EMAIL"] = "user@example.com"
-os.environ["ACCOUNT_PASSWORD"] = "password"
-os.environ["ACCOUNT_SMTP_SERVER"] = "smtp.example.com"
-os.environ["ACCOUNT_SMTP_PORT"] = "587"
-os.environ["ACCOUNT_IMAP_SERVER"] = "imap.example.com"
-os.environ["ACCOUNT_IMAP_PORT"] = "993"
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.models import (  # noqa: E402
-    EmailSummary,
-    ErrorResponse,
-    MessageResponse,
-    SendEmailRequest,
-)
+from app.models import EmailSummary, ErrorResponse, MessageResponse, SendEmailRequest
 
 
-def test_send_email_request_invalid_email():
+@pytest.mark.asyncio
+async def test_send_email_request_invalid_email():
     with pytest.raises(ValidationError):
         SendEmailRequest(to_addresses=["not-an-email"], subject="S", body="B")
 
 
-def test_send_email_request_long_subject():
+@pytest.mark.asyncio
+async def test_send_email_request_long_subject():
     with pytest.raises(ValidationError):
         SendEmailRequest(to_addresses=["a@b.com"], subject="a" * 256, body="B")
 
 
-def test_send_email_request_empty_fields():
+@pytest.mark.asyncio
+async def test_send_email_request_empty_fields():
     with pytest.raises(ValidationError):
         SendEmailRequest(to_addresses=[], subject="S", body="B")
     with pytest.raises(ValidationError):
@@ -41,17 +28,19 @@ def test_send_email_request_empty_fields():
         SendEmailRequest(to_addresses=["a@b.com"], subject="S", body="")
 
 
-def test_send_email_request_invalid_attachment_urls():
+@pytest.mark.asyncio
+async def test_send_email_request_invalid_attachment_urls():
     with pytest.raises(ValidationError):
         SendEmailRequest(
             to_addresses=["a@b.com"],
             subject="S",
             body="B",
-            file_url="https://example.com,not-a-url",
+            file_urls="https://example.com,not-a-url",
         )
 
 
-def test_email_summary_alias_and_datetime():
+@pytest.mark.asyncio
+async def test_email_summary_alias_and_datetime():
     dt = datetime(2024, 1, 1, 12, 0, 0)
     summary = EmailSummary(
         uid="1", subject="S", **{"from": "a@b.com"}, date=dt, seen=True
@@ -62,24 +51,28 @@ def test_email_summary_alias_and_datetime():
     assert dt.isoformat() in json_data
 
 
-def test_email_summary_invalid_uid():
+@pytest.mark.asyncio
+async def test_email_summary_invalid_uid():
     with pytest.raises(ValidationError):
         EmailSummary(uid="", seen=True)
     with pytest.raises(ValidationError):
         EmailSummary(uid=None, seen=True)  # type: ignore
 
 
-def test_message_response_empty_message():
+@pytest.mark.asyncio
+async def test_message_response_empty_message():
     with pytest.raises(ValidationError):
         MessageResponse(message="")
 
 
-def test_error_response_optional_code():
+@pytest.mark.asyncio
+async def test_error_response_optional_code():
     err = ErrorResponse(detail="Missing API key")
     assert err.detail == "Missing API key"
     assert err.code is None
 
 
-def test_error_response_with_code():
+@pytest.mark.asyncio
+async def test_error_response_with_code():
     err = ErrorResponse(detail="Forbidden", code="forbidden")
     assert err.code == "forbidden"

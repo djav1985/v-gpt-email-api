@@ -42,6 +42,11 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Forward and reply endpoints accept an optional folder parameter.
 - Tests use `pytest.mark.asyncio` instead of `asyncio.run`.
 - Removed blanket `flake8` ignores in favor of targeted suppressions.
+- `SendEmailRequest.file_url` renamed to `file_urls`.
+- Attachment filenames are sanitized and path traversal is blocked.
+- `get_api_key` now requires a Bearer token and rejects missing credentials.
+- Invalid SMTP or IMAP port values raise a descriptive `RuntimeError`.
+- Temporary attachment directories are removed in a background thread to avoid blocking.
 
 ### Removed
 - Deprecated `app/services/imap_client.py` in favor of a dedicated IMAP router.
