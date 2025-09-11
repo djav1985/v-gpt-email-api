@@ -9,7 +9,7 @@ from .routes.read_email import read_router
 from .routes.imap import imap_router
 
 
-openapi_tags = [
+tags_metadata = [
     {"name": "Send", "description": "Endpoints for sending emails"},
     {"name": "Read", "description": "Endpoints for reading emails"},
     {"name": "IMAP", "description": "Low-level IMAP operations"},
@@ -22,7 +22,7 @@ app = FastAPI(
     version="0.1.0",
     description="A FastAPI to send emails",
     openapi_version="3.1.0",
-    openapi_tags=openapi_tags,
+    openapi_tags=tags_metadata,
     root_path=os.getenv('ROOT_PATH', '/'),
     root_path_in_servers=False,
     servers=[
@@ -48,3 +48,36 @@ async def startup_event() -> None:
 app.include_router(send_router)
 app.include_router(read_router)
 app.include_router(imap_router)
+
+def custom_openapi() -> dict:
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=tags_metadata,
+        servers=app.servers,
+    )
+    security_scheme = (
+        openapi_schema.get("components", {})
+        .get("securitySchemes", {})
+        .get("HTTPBearer", {})
+    )
+    if security_scheme:
+        security_scheme["description"] = "Provide the API key as a Bearer token"
+        security_scheme["bearerFormat"] = "API Key"
+    openapi_schema["openapi"] = "3.1.0"
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
