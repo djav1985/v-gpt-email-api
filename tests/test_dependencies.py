@@ -174,22 +174,25 @@ async def test_send_email_smtp_exception(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_api_key_without_env(monkeypatch):
-    monkeypatch.delenv("API_KEY", raising=False)
+    dependencies.settings.api_key = None
     assert dependencies.get_api_key(api_key="token") == "token"
-    with pytest.raises(HTTPException):
+    with pytest.raises(HTTPException) as exc:
         dependencies.get_api_key(api_key=None)
+    assert exc.value.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_get_api_key_with_env_valid(monkeypatch):
-    monkeypatch.setenv("API_KEY", "secret")
+    dependencies.settings.api_key = "secret"
     assert dependencies.get_api_key(api_key="secret") == "secret"
 
 
 @pytest.mark.asyncio
 async def test_get_api_key_with_env_invalid(monkeypatch):
-    monkeypatch.setenv("API_KEY", "secret")
-    with pytest.raises(HTTPException):
+    dependencies.settings.api_key = "secret"
+    with pytest.raises(HTTPException) as exc:
         dependencies.get_api_key(api_key="wrong")
-    with pytest.raises(HTTPException):
+    assert exc.value.status_code == 401
+    with pytest.raises(HTTPException) as exc2:
         dependencies.get_api_key(api_key=None)
+    assert exc2.value.status_code == 401

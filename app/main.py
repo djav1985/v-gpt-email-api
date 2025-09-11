@@ -1,16 +1,19 @@
+"""Application entry point configuring routes and startup behavior."""
+
 import os
-from typing import AsyncGenerator
-import aiofiles
 from contextlib import asynccontextmanager
-from pydantic import ValidationError
+from typing import AsyncGenerator
+
+import aiofiles
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from . import dependencies
-from .routes.send_email import send_router
-from .routes.read_email import read_router
 from .routes.imap import imap_router
+from .routes.read_email import read_router
+from .routes.send_email import send_router
 
 tags_metadata = [
     {"name": "Send", "description": "Endpoints for sending emails"},
@@ -21,6 +24,7 @@ tags_metadata = [
 
 @asynccontextmanager
 async def lifespan(app) -> AsyncGenerator[None, None]:
+    """Load configuration and signature text at startup."""
     try:
         dependencies.settings = dependencies.Config()
     except ValidationError as exc:
@@ -66,6 +70,7 @@ app.include_router(imap_router)
 
 
 def custom_openapi() -> dict:
+    """Generate and cache a custom OpenAPI schema for the app."""
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi(
@@ -95,6 +100,7 @@ app.openapi = custom_openapi
 
 @app.exception_handler(HTTPException)
 def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Return JSON errors for ``HTTPException`` instances."""
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

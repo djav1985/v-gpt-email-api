@@ -1,24 +1,27 @@
+"""Low-level IMAP utilities and routes."""
+
 import asyncio
 import email
-from email import header, message, utils
 import imaplib
 import re
 import time
+from email import header, message, utils
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime
 
-from fastapi import APIRouter, HTTPException, Query, Path, Body, Security
+from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from .. import dependencies
 from ..dependencies import get_api_key
 from ..models import (
+    EmailBody,
     EmailSummary,
+    FoldersResponse,
     MessageResponse,
     SendEmailRequest,
-    FoldersResponse,
-    EmailBody,
 )
+from . import COMMON_ERROR_RESPONSES
 
 
 def _decode_header(value: str) -> str:
@@ -33,6 +36,7 @@ def _decode_header(value: str) -> str:
 
 
 def decode_header_value(value: str) -> str:
+    """Decode an encoded email header value."""
     return _decode_header(value)
 
 
@@ -55,6 +59,7 @@ def _extract_body(msg: message.Message) -> str:
 
 
 def extract_body(msg: message.Message) -> str:
+    """Extract the plain text body from an email message."""
     return _extract_body(msg)
 
 
@@ -235,6 +240,7 @@ async def fetch_message(uid: str, folder: str = "INBOX") -> message.Message:
 async def move_email_action(
     uid: str, folder: str, source_folder: str = "INBOX"
 ) -> MessageResponse:
+    """Move an email to a different folder."""
     try:
         await move_message(uid, folder, source_folder)
         return MessageResponse(message="Email moved")
@@ -243,6 +249,7 @@ async def move_email_action(
 
 
 async def delete_email_action(uid: str, folder: str = "INBOX") -> MessageResponse:
+    """Delete an email from the specified folder."""
     try:
         await delete_message(uid, folder)
         return MessageResponse(message="Email deleted")
@@ -251,6 +258,7 @@ async def delete_email_action(uid: str, folder: str = "INBOX") -> MessageRespons
 
 
 async def create_draft_action(request: SendEmailRequest) -> MessageResponse:
+    """Store a draft email message."""
     if dependencies.settings is None:
         raise HTTPException(
             status_code=500, detail="Settings have not been initialized"
@@ -274,8 +282,10 @@ imap_router = APIRouter(prefix="/imap", tags=["IMAP"])
     "/folders",
     dependencies=[Security(get_api_key)],
     response_model=FoldersResponse,
+    responses=COMMON_ERROR_RESPONSES,
 )
 async def get_folders() -> FoldersResponse:
+    """Return a list of available mail folders."""
     try:
         folders = await list_mailboxes()
         return FoldersResponse(folders=folders)
@@ -284,13 +294,17 @@ async def get_folders() -> FoldersResponse:
 
 
 @imap_router.get(
-    "/emails", response_model=list[EmailSummary], dependencies=[Security(get_api_key)]
+    "/emails",
+    response_model=list[EmailSummary],
+    dependencies=[Security(get_api_key)],
+    responses=COMMON_ERROR_RESPONSES,
 )
 async def get_emails(
     folder: str = Query("INBOX", description="Mail folder to read from"),
     limit: int = Query(10, gt=0, description="Maximum number of emails to return"),
     unread: bool = Query(False, description="Only fetch unread emails"),
 ) -> list[EmailSummary]:
+    """Fetch emails from a folder using low-level IMAP operations."""
     try:
         return await fetch_messages(folder, limit, unread)
     except Exception as e:
@@ -301,12 +315,14 @@ async def get_emails(
     "/emails/{uid}/move",
     dependencies=[Security(get_api_key)],
     response_model=MessageResponse,
+    responses=COMMON_ERROR_RESPONSES,
 )
 async def move_email(
     uid: str = Path(..., description="UID of the email to move"),
     folder: str = Query(..., description="Destination folder"),
     source_folder: str = Query("INBOX", description="Source folder"),
 ) -> MessageResponse:
+    """Move an email via :func:`move_email_action`."""
     return await move_email_action(uid, folder, source_folder)
 
 
@@ -314,10 +330,12 @@ async def move_email(
     "/emails/{uid}",
     dependencies=[Security(get_api_key)],
     response_model=MessageResponse,
+    responses=COMMON_ERROR_RESPONSES,
 )
 async def delete_email(
     uid: str = Path(...), folder: str = Query("INBOX")
 ) -> MessageResponse:
+    """Delete an email via :func:`delete_email_action`."""
     return await delete_email_action(uid, folder)
 
 
@@ -325,10 +343,12 @@ async def delete_email(
     "/emails/{uid}",
     dependencies=[Security(get_api_key)],
     response_model=EmailBody,
+    responses=COMMON_ERROR_RESPONSES,
 )
 async def get_email(
     uid: str = Path(...), folder: str = Query("INBOX")
 ) -> EmailBody:
+    """Retrieve the full body of an email."""
     try:
         msg = await fetch_message(uid, folder)
         return EmailBody(body=extract_body(msg))
@@ -337,7 +357,11 @@ async def get_email(
 
 
 @imap_router.post(
-    "/drafts", dependencies=[Security(get_api_key)], response_model=MessageResponse
+    "/drafts",
+    dependencies=[Security(get_api_key)],
+    response_model=MessageResponse,
+    responses=COMMON_ERROR_RESPONSES,
 )
 async def create_draft(request: SendEmailRequest = Body(...)) -> MessageResponse:
+    """Create a draft email via :func:`create_draft_action`."""
     return await create_draft_action(request)

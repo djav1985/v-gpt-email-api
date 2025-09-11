@@ -1,7 +1,12 @@
+"""Route for sending emails."""
+
 import logging
+
 from fastapi import APIRouter, Body, HTTPException, Security
-from ..models import SendEmailRequest, MessageResponse, ErrorResponse
-from ..dependencies import send_email, get_api_key
+
+from ..dependencies import get_api_key, send_email
+from ..models import MessageResponse, SendEmailRequest
+from . import COMMON_ERROR_RESPONSES
 
 send_router = APIRouter(tags=["Send"])
 logger = logging.getLogger(__name__)
@@ -21,54 +26,7 @@ logger = logging.getLogger(__name__)
                 "application/json": {"example": {"message": "Email sent successfully"}}
             }
         },
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Invalid request",
-                        "code": "invalid_request",
-                    }
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authorized",
-                        "code": "not_authorized",
-                    }
-                }
-            },
-        },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Server error",
-                        "code": "server_error",
-                    }
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def send_email_endpoint(
@@ -86,6 +44,7 @@ async def send_email_endpoint(
             ],
     )
 ) -> MessageResponse:
+    """Handle POST requests for sending an email."""
     subject = request.subject
     body = request.body
     file_urls = [str(url) for url in request.file_urls] if request.file_urls else None

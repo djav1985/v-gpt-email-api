@@ -1,15 +1,17 @@
+"""Routes for reading, manipulating, and drafting emails."""
+
 from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from ..dependencies import get_api_key, send_email
 from ..models import (
     EmailSummary,
     ErrorResponse,
+    FoldersResponse,
     MessageResponse,
     SendEmailRequest,
-    FoldersResponse,
 )
-from . import imap
-from .imap import move_email_action, delete_email_action, create_draft_action
+from . import COMMON_ERROR_RESPONSES, imap
+from .imap import create_draft_action, delete_email_action, move_email_action
 
 read_router = APIRouter(tags=["Read"])
 
@@ -37,36 +39,6 @@ read_router = APIRouter(tags=["Read"])
                 }
             }
         },
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Emails not found",
@@ -76,15 +48,7 @@ read_router = APIRouter(tags=["Read"])
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def get_emails(
@@ -92,6 +56,7 @@ async def get_emails(
     unread: bool = Query(False, description="Only fetch unread emails"),
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> list[EmailSummary]:
+    """Retrieve email summaries from the specified folder."""
     try:
         return await imap.fetch_messages(folder, limit, unread)
     except Exception as e:
@@ -109,42 +74,6 @@ async def get_emails(
         200: {
             "content": {"application/json": {"example": {"folders": ["INBOX", "Archive"]}}}
         },
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Invalid request",
-                        "code": "invalid_request",
-                    }
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authorized",
-                        "code": "not_authorized",
-                    }
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Folders not found",
@@ -157,21 +86,11 @@ async def get_emails(
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Server error",
-                        "code": "server_error",
-                    }
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def get_folders() -> FoldersResponse:
+    """List available mail folders."""
     try:
         folders = await imap.list_mailboxes()
         return FoldersResponse(folders=folders)
@@ -188,36 +107,6 @@ async def get_folders() -> FoldersResponse:
     operation_id="move_email",
     responses={
         200: {"content": {"application/json": {"example": {"message": "Email moved"}}}},
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Email not found",
@@ -227,15 +116,7 @@ async def get_folders() -> FoldersResponse:
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def move_email(
@@ -243,6 +124,7 @@ async def move_email(
     folder: str = Query(..., description="Destination folder"),
     source_folder: str = Query("INBOX", description="Source folder"),
 ) -> MessageResponse:
+    """Move an email to a different folder."""
     return await move_email_action(uid, folder, source_folder)
 
 
@@ -257,36 +139,6 @@ async def move_email(
         200: {
             "content": {"application/json": {"example": {"message": "Email forwarded"}}}
         },
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Email not found",
@@ -296,15 +148,7 @@ async def move_email(
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def forward_email(
@@ -324,6 +168,7 @@ async def forward_email(
     ),
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> MessageResponse:
+    """Forward an existing email to new recipients."""
     try:
         original = await imap.fetch_message(uid, folder)
         original_body = imap.extract_body(original)
@@ -356,36 +201,6 @@ async def forward_email(
     operation_id="reply_email",
     responses={
         200: {"content": {"application/json": {"example": {"message": "Email sent"}}}},
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Email not found",
@@ -395,15 +210,7 @@ async def forward_email(
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def reply_email(
@@ -423,6 +230,7 @@ async def reply_email(
     ),
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> MessageResponse:
+    """Reply to an existing email."""
     try:
         original = await imap.fetch_message(uid, folder)
         body = request.body or imap.extract_body(original)
@@ -455,36 +263,6 @@ async def reply_email(
         200: {
             "content": {"application/json": {"example": {"message": "Email deleted"}}}
         },
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Email not found",
@@ -494,21 +272,14 @@ async def reply_email(
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def delete_email(
     uid: str = Path(..., description="UID of the email to delete"),
     folder: str = Query("INBOX", description="Folder containing the email"),
 ) -> MessageResponse:
+    """Delete an email from the specified folder."""
     return await delete_email_action(uid, folder)
 
 
@@ -523,36 +294,6 @@ async def delete_email(
         200: {
             "content": {"application/json": {"example": {"message": "Draft stored"}}}
         },
-        400: {
-            "model": ErrorResponse,
-            "description": "Invalid request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
-                }
-            },
-        },
-        401: {
-            "model": ErrorResponse,
-            "description": "Missing API key",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Not authenticated",
-                        "code": "not_authenticated",
-                    }
-                }
-            },
-        },
-        403: {
-            "model": ErrorResponse,
-            "description": "Forbidden",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
-                }
-            },
-        },
         404: {
             "model": ErrorResponse,
             "description": "Folder not found",
@@ -562,15 +303,7 @@ async def delete_email(
                 }
             },
         },
-        500: {
-            "model": ErrorResponse,
-            "description": "Server error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
-                }
-            },
-        },
+        **COMMON_ERROR_RESPONSES,
     },
 )
 async def create_draft(
@@ -588,4 +321,5 @@ async def create_draft(
         ],
     )
 ) -> MessageResponse:
+    """Store an email draft in the Drafts folder."""
     return await create_draft_action(request)

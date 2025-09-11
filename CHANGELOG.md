@@ -28,6 +28,9 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Added `requirements-dev.txt` with `pytest` and `pytest-asyncio`, and documented test execution steps.
 - `FoldersResponse` and `EmailBody` models for structured folder and body responses.
 - `ErrorCode` enumeration for standardized error codes.
+- Docstrings across core modules and routes for clarity.
+- Shared `COMMON_ERROR_RESPONSES` constant for FastAPI routes.
+- Tests covering missing and invalid API key scenarios.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
@@ -50,6 +53,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - `SendEmailRequest.file_url` renamed to `file_urls`.
 - Attachment filenames are sanitized and path traversal is blocked.
 - `get_api_key` now requires an `X-API-Key` header and rejects missing credentials.
+- API key validation now returns HTTP 401 for missing or invalid keys.
 - Invalid SMTP or IMAP port values raise a descriptive `RuntimeError`.
 - Temporary attachment directories are removed in a background thread to avoid blocking.
 

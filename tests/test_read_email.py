@@ -47,6 +47,24 @@ async def test_get_emails_negative_limit(client):
 
 
 @pytest.mark.asyncio
+async def test_get_emails_missing_api_key(client):
+    del client.headers["X-API-Key"]
+    resp = await client.get("/emails")
+    assert resp.status_code == 401
+    client.headers["X-API-Key"] = "token"
+
+
+@pytest.mark.asyncio
+async def test_get_emails_invalid_api_key(monkeypatch, client):
+    dependencies.settings.api_key = "expected"
+    client.headers["X-API-Key"] = "wrong"
+    resp = await client.get("/emails")
+    assert resp.status_code == 401
+    dependencies.settings.api_key = None
+    client.headers["X-API-Key"] = "token"
+
+
+@pytest.mark.asyncio
 async def test_imap_emails_negative_limit(client):
     resp = await client.get("/imap/emails?limit=-1")
     assert resp.status_code == 422
