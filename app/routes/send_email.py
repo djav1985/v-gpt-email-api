@@ -1,8 +1,10 @@
+import logging
 from fastapi import APIRouter, Body, HTTPException, Security
 from ..models import SendEmailRequest, MessageResponse, ErrorResponse
 from ..dependencies import send_email, get_api_key
 
 send_router = APIRouter(tags=["Send"])
+logger = logging.getLogger(__name__)
 
 
 @send_router.post(
@@ -11,7 +13,7 @@ send_router = APIRouter(tags=["Send"])
     dependencies=[Security(get_api_key)],
     summary="Send an email",
     description="Send an email to one or more recipients.",
-    status_code=201,
+    status_code=200,
     response_model=MessageResponse,
     responses={
         200: {
@@ -98,8 +100,8 @@ async def send_email_endpoint(
         )
         return MessageResponse(message="Email sent successfully")
     except HTTPException as e:
-        print(f"HTTPException: {e.detail}")
+        logger.error("HTTPException: %s", e.detail)
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        logger.exception("Unexpected error while sending email")
         raise HTTPException(status_code=500, detail=str(e))

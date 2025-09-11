@@ -24,12 +24,19 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Standardized `ErrorResponse` model with example payloads and documented 401/403 responses.
 - Example request bodies and success responses for email routes and models.
 - OpenAPI metadata now declares version 3.1.0 and derives the server URL from `BASE_URL` and `ROOT_PATH` environment variables.
+ - Streaming attachment downloads to disk to limit memory usage.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
 - Explicit operation IDs defined for read email endpoints.
 - `send_email` accepts a list of attachment URLs via `file_urls` instead of a comma-separated string.
 - API routes now use `Security(get_api_key)` for API-key protection and include descriptive OpenAPI tags.
+- Send email endpoint now returns HTTP 200 on success.
+- Forwarding emails respect the provided request body.
+- `limit` query parameters on email listing routes must be positive.
+- Console prints replaced with structured logging and logging configured at startup.
+- Startup now validates required environment variables before initializing settings.
+- Shared IMAP operations consolidated into reusable helpers.
 
 ### Removed
 - Deprecated `app/services/imap_client.py` in favor of a dedicated IMAP router.

@@ -1,5 +1,6 @@
-# main,py
+# flake8: noqa
 import os
+import logging
 import aiofiles
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -21,15 +22,33 @@ tags_metadata = [
 # FastAPI application instance setup
 from contextlib import asynccontextmanager
 
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app):
+    logging.basicConfig(level=logging.INFO)
+    required = [
+        "ACCOUNT_EMAIL",
+        "ACCOUNT_PASSWORD",
+        "ACCOUNT_SMTP_SERVER",
+        "ACCOUNT_SMTP_PORT",
+        "ACCOUNT_IMAP_SERVER",
+        "ACCOUNT_IMAP_PORT",
+    ]
+    missing = [var for var in required if not os.getenv(var)]
+    if missing:
+        logger.error("Missing required environment variables: %s", ", ".join(missing))
+        raise RuntimeError(
+            f"Missing required environment variables: {', '.join(missing)}"
+        )
     dependencies.settings = dependencies.Config(
-        account_email=os.getenv("ACCOUNT_EMAIL") or "",
-        account_password=os.getenv("ACCOUNT_PASSWORD") or "",
-        account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER") or "",
-        account_smtp_port=int(os.getenv("ACCOUNT_SMTP_PORT", "587")),
-        account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER") or "",
-        account_imap_port=int(os.getenv("ACCOUNT_IMAP_PORT", "993")),
+        account_email=os.getenv("ACCOUNT_EMAIL"),
+        account_password=os.getenv("ACCOUNT_PASSWORD"),
+        account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER"),
+        account_smtp_port=int(os.getenv("ACCOUNT_SMTP_PORT")),
+        account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER"),
+        account_imap_port=int(os.getenv("ACCOUNT_IMAP_PORT")),
     )
     try:
         async with aiofiles.open("config/signature.txt", "r") as file:

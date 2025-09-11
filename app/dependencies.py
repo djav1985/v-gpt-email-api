@@ -1,6 +1,7 @@
 # flake8: noqa
 # dependancies.py
 import os
+import logging
 import aiosmtplib
 import aiofiles
 import aiohttp
@@ -48,6 +49,7 @@ class Config(BaseSettings):
 
 settings: Config | None = None
 signature_text: str = ""
+logger = logging.getLogger(__name__)
 
 ALLOWED_FILE_TYPES = {
     ".zip",
@@ -79,7 +81,9 @@ async def fetch_file(session, url, temp_dir) -> str:
     timeout = aiohttp.ClientTimeout(total=10)
     async with session.get(url, timeout=timeout) as response:
         if response.status != 200:
-            print(f"Failed to download file from {url} with status {response.status}")
+            logger.error(
+                "Failed to download file from %s with status %s", url, response.status
+            )
             raise HTTPException(
                 status_code=response.status,
                 detail=f"Failed to download file from {url}",
@@ -88,8 +92,8 @@ async def fetch_file(session, url, temp_dir) -> str:
         file_path = os.path.join(temp_dir, filename)
 
         async with aiofiles.open(file_path, "wb") as out_file:
-            content = await response.read()
-            await out_file.write(content)
+            async for chunk in response.content.iter_chunked(1024):
+                await out_file.write(chunk)
 
         return file_path
 
@@ -164,10 +168,10 @@ async def send_email(
                     )
                     msg.attach(part)
         except HTTPException as e:
-            print(f"HTTPException during file handling: {e.detail}")
+            logger.error("HTTPException during file handling: %s", e.detail)
             raise
         except Exception as e:
-            print(f"Unexpected error during file handling: {str(e)}")
+            logger.exception("Unexpected error during file handling")
             raise
         finally:
             shutil.rmtree(temp_dir)
@@ -182,10 +186,10 @@ async def send_email(
             start_tls=settings.start_tls,
         )
     except aiosmtplib.errors.SMTPException as e:
-        print(f"SMTPException: {str(e)}")
+        logger.error("SMTPException: %s", str(e))
         raise HTTPException(status_code=500, detail=f"SMTP server error: {str(e)}")
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        logger.exception("Unexpected error while sending email")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 async def get_api_key(

@@ -190,6 +190,37 @@ async def fetch_message(uid: str, folder: str = "INBOX") -> email.message.Messag
     return await asyncio.to_thread(inner)
 
 
+async def move_email_action(uid: str, folder: str, source_folder: str = "INBOX") -> MessageResponse:
+    try:
+        await move_message(uid, folder, source_folder)
+        return MessageResponse(message="Email moved")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def delete_email_action(uid: str, folder: str = "INBOX") -> MessageResponse:
+    try:
+        await delete_message(uid, folder)
+        return MessageResponse(message="Email deleted")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def create_draft_action(request: SendEmailRequest) -> MessageResponse:
+    if dependencies.settings is None:
+        raise HTTPException(status_code=500, detail="Settings have not been initialized")
+    msg = MIMEMultipart()
+    msg["From"] = dependencies.settings.account_email
+    msg["To"] = ", ".join(request.to_addresses)
+    msg["Subject"] = request.subject
+    msg.attach(MIMEText(request.body, "html"))
+    try:
+        await append_message("Drafts", msg)
+        return MessageResponse(message="Draft stored")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 imap_router = APIRouter(prefix="/imap", tags=["IMAP"])
 
 
@@ -204,7 +235,7 @@ async def get_folders() -> list[str]:
 @imap_router.get("/emails", response_model=list[EmailSummary], dependencies=[Security(get_api_key)])
 async def get_emails(
     folder: str = Query("INBOX", description="Mail folder to read from"),
-    limit: int = Query(10, description="Maximum number of emails to return"),
+    limit: int = Query(10, gt=0, description="Maximum number of emails to return"),
     unread: bool = Query(False, description="Only fetch unread emails"),
 ) -> list[EmailSummary]:
     try:
@@ -219,20 +250,12 @@ async def move_email(
     folder: str = Query(..., description="Destination folder"),
     source_folder: str = Query("INBOX", description="Source folder"),
 ) -> MessageResponse:
-    try:
-        await move_message(uid, folder, source_folder)
-        return MessageResponse(message="Email moved")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await move_email_action(uid, folder, source_folder)
 
 
 @imap_router.delete("/emails/{uid}", dependencies=[Security(get_api_key)], response_model=MessageResponse)
 async def delete_email(uid: str = Path(...), folder: str = Query("INBOX")) -> MessageResponse:
-    try:
-        await delete_message(uid, folder)
-        return MessageResponse(message="Email deleted")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await delete_email_action(uid, folder)
 
 
 @imap_router.get("/emails/{uid}", dependencies=[Security(get_api_key)])
@@ -246,15 +269,4 @@ async def get_email(uid: str = Path(...), folder: str = Query("INBOX")) -> dict:
 
 @imap_router.post("/drafts", dependencies=[Security(get_api_key)], response_model=MessageResponse)
 async def create_draft(request: SendEmailRequest = Body(...)) -> MessageResponse:
-    if dependencies.settings is None:
-        raise HTTPException(status_code=500, detail="Settings have not been initialized")
-    msg = MIMEMultipart()
-    msg["From"] = dependencies.settings.account_email
-    msg["To"] = ", ".join(request.to_addresses)
-    msg["Subject"] = request.subject
-    msg.attach(MIMEText(request.body, "html"))
-    try:
-        await append_message("Drafts", msg)
-        return MessageResponse(message="Draft stored")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await create_draft_action(request)

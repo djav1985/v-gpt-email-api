@@ -38,7 +38,7 @@ def test_send_email(monkeypatch):
             "file_url": urls,
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert response.json() == {"message": "Email sent successfully"}
     assert captured["file_urls"] == urls
 

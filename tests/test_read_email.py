@@ -46,6 +46,16 @@ def test_get_emails(monkeypatch):
     assert data[0]["uid"] == "1"
 
 
+def test_get_emails_negative_limit():
+    resp = client.get("/emails?limit=-1")
+    assert resp.status_code == 422
+
+
+def test_imap_emails_negative_limit():
+    resp = client.get("/imap/emails?limit=-1")
+    assert resp.status_code == 422
+
+
 def test_move_email(monkeypatch):
     called = {}
 
@@ -100,7 +110,7 @@ def test_forward_email(monkeypatch):
     )
     assert response.status_code == 200
     assert sent["subject"] == "S"
-    assert sent["body"] == "body"
+    assert sent["body"] == "B\n\nbody"
     assert sent["headers"]["In-Reply-To"] == "<1@example.com>"
     assert sent["headers"]["References"] == "<1@example.com>"
     assert response.json() == {"message": "Email forwarded"}
