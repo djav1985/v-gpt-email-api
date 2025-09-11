@@ -33,7 +33,7 @@ jobs:
             --header-style classic \
             --navigation-style bullet \
             --tree-max-depth 5 \
-            --logo custom
+            --logo ./v-gpt-email-api.png
 
       - name: Commit and push updated README
         run: |
