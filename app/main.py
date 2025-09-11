@@ -8,7 +8,10 @@ from .routes.send_email import send_router
 from .routes.read_email import read_router
 
 
-openapi_tags = [{"name": "Send"}, {"name": "Read"}]
+openapi_tags = [
+    {"name": "Send", "description": "Endpoints for sending emails"},
+    {"name": "Read", "description": "Endpoints for reading emails"},
+]
 
 
 # FastAPI application instance setup

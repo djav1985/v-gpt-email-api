@@ -2,10 +2,10 @@
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from ..dependencies import get_api_key, send_email
-from ..models import SendEmailRequest, EmailSummary, MessageResponse
+from ..models import EmailSummary, ErrorResponse, MessageResponse, SendEmailRequest
 from ..services import imap_client
 from .. import dependencies
 
@@ -15,14 +15,71 @@ read_router = APIRouter(tags=["Read"])
 @read_router.get(
     "/emails",
     response_model=list[EmailSummary],
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Fetch emails",
     description="Return emails from the specified folder.",
     operation_id="fetch_emails",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Emails not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "uid": "1",
+                            "subject": "Hello",
+                            "from": "sender@example.com",
+                            "date": "2024-01-01T12:00:00Z",
+                            "seen": False,
+                        }
+                    ]
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Emails not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Emails not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
 async def get_emails(
@@ -38,14 +95,61 @@ async def get_emails(
 
 @read_router.get(
     "/folders",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="List mail folders",
     description="List available mail folders.",
     operation_id="list_folders",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Folders not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {"example": ["INBOX", "Archive"]}
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Folders not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Folders not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
 async def get_folders() -> list[str]:
@@ -57,15 +161,64 @@ async def get_folders() -> list[str]:
 
 @read_router.post(
     "/emails/{uid}/move",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Move an email",
     description="Move an email to another folder.",
     response_model=MessageResponse,
     operation_id="move_email",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Email not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {"message": "Email moved"}
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Email not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Email not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
 async def move_email(
@@ -82,20 +235,81 @@ async def move_email(
 
 @read_router.post(
     "/emails/{uid}/forward",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Forward an email",
     description="Forward an existing email to new recipients.",
     response_model=MessageResponse,
     operation_id="forward_email",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Email not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {"message": "Email forwarded"}
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Email not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Email not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
 async def forward_email(
     uid: str = Path(..., description="UID of the email to forward"),
-    request: SendEmailRequest = ...,
+    request: SendEmailRequest = Body(
+        ...,
+        examples={
+            "basic": {
+                "summary": "Forward email",
+                "value": {
+                    "to_addresses": ["recipient@example.com"],
+                    "subject": "Fwd: Greetings",
+                    "body": "See attached",
+                },
+            }
+        },
+    ),
 ) -> MessageResponse:
     try:
         original = await imap_client.fetch_message(uid)
@@ -119,20 +333,81 @@ async def forward_email(
 
 @read_router.post(
     "/emails/{uid}/reply",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Reply to an email",
     description="Reply to an existing email.",
     response_model=MessageResponse,
     operation_id="reply_email",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Email not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {"message": "Email sent"}
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Email not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Email not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
 async def reply_email(
     uid: str = Path(..., description="UID of the email to reply to"),
-    request: SendEmailRequest = ...,
+    request: SendEmailRequest = Body(
+        ...,
+        examples={
+            "basic": {
+                "summary": "Reply to email",
+                "value": {
+                    "to_addresses": ["recipient@example.com"],
+                    "subject": "Re: Greetings",
+                    "body": "Thanks!",
+                },
+            }
+        },
+    ),
 ) -> MessageResponse:
     try:
         original = await imap_client.fetch_message(uid)
@@ -157,15 +432,64 @@ async def reply_email(
 
 @read_router.delete(
     "/emails/{uid}",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Delete an email",
     description="Delete an email from a folder.",
     response_model=MessageResponse,
     operation_id="delete_email",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Email not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {"message": "Email deleted"}
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Email not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Email not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
 async def delete_email(
@@ -181,18 +505,81 @@ async def delete_email(
 
 @read_router.post(
     "/drafts",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Create a draft email",
     description="Store an email draft in the Drafts folder.",
     response_model=MessageResponse,
     operation_id="create_draft",
     responses={
-        400: {"description": "Invalid request"},
-        404: {"description": "Folder not found"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {"message": "Draft stored"}
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Folder not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Folder not found", "code": "not_found"}
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server error", "code": "server_error"}
+                }
+            },
+        },
     },
 )
-async def create_draft(request: SendEmailRequest) -> MessageResponse:
+async def create_draft(
+    request: SendEmailRequest = Body(
+        ...,
+        examples={
+            "basic": {
+                "summary": "Draft email",
+                "value": {
+                    "to_addresses": ["recipient@example.com"],
+                    "subject": "Draft",
+                    "body": "Draft body",
+                },
+            }
+        },
+    )
+) -> MessageResponse:
     if dependencies.settings is None:
         raise HTTPException(status_code=500, detail="Settings have not been initialized")
     msg = MIMEMultipart()

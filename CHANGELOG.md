@@ -20,8 +20,11 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Extensive tests for dependencies, IMAP client, routes, models, and startup logic.
 - `account_reply_to` configuration option for customizing the Reply-To header.
 - Validation for required fields in email models, including recipient lists, subjects, bodies, messages, UIDs, and attachment URLs.
+- Standardized `ErrorResponse` model with example payloads and documented 401/403 responses.
+- Example request bodies and success responses for email routes and models.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
 - Explicit operation IDs defined for read email endpoints.
 - `send_email` accepts a list of attachment URLs via `file_urls` instead of a comma-separated string.
+- API routes now use `Security(get_api_key)` for API-key protection and include descriptive OpenAPI tags.

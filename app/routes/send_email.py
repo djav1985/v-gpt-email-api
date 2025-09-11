@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from ..models import SendEmailRequest, MessageResponse
+from fastapi import APIRouter, Body, HTTPException, Security
+from ..models import SendEmailRequest, MessageResponse, ErrorResponse
 from ..dependencies import send_email, get_api_key
 
 send_router = APIRouter(tags=["Send"])
@@ -8,17 +8,84 @@ send_router = APIRouter(tags=["Send"])
 @send_router.post(
     "/",
     operation_id="send_email",
-    dependencies=[Depends(get_api_key)],
+    dependencies=[Security(get_api_key)],
     summary="Send an email",
     description="Send an email to one or more recipients.",
     status_code=201,
     response_model=MessageResponse,
     responses={
-        400: {"description": "Invalid request"},
-        500: {"description": "Server error"},
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {"message": "Email sent successfully"}
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid request",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "code": "invalid_request",
+                    }
+                }
+            },
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing API key",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
+                }
+            },
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Not authorized",
+                        "code": "not_authorized",
+                    }
+                }
+            },
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Server error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Server error",
+                        "code": "server_error",
+                    }
+                }
+            },
+        },
     },
 )
-async def send_email_endpoint(request: SendEmailRequest) -> MessageResponse:
+async def send_email_endpoint(
+    request: SendEmailRequest = Body(
+        ...,
+        examples={
+            "basic": {
+                "summary": "Simple email",
+                "value": {
+                    "to_addresses": ["recipient@example.com"],
+                    "subject": "Greetings",
+                    "body": "Hello there!",
+                },
+            }
+        },
+    )
+) -> MessageResponse:
     subject = request.subject
     body = request.body
     file_urls = (
