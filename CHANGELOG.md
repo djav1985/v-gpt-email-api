@@ -13,7 +13,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Header decoding concatenates multi-part encodings.
 - Attachment downloads restricted to HTTP/HTTPS schemes.
 - Email summary dates stored as `datetime` and serialized in ISO format.
-- Contact, license, and terms metadata added to the FastAPI application along with Send/Read tags.
+- Send/Read tags added to the FastAPI application.
 - Consistent `MessageResponse` model used across message endpoints and documented error responses.
 - Named API key bearer security scheme exposed in the OpenAPI schema.
 - Tests for API key validation and email sending error handling.

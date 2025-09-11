@@ -20,12 +20,6 @@ app = FastAPI(
     version="0.1.0",
     description="A FastAPI to send emails",
     openapi_version="3.1.0",
-    contact={"name": "API Support", "email": "support@example.com"},
-    license_info={
-        "name": "MIT License",
-        "url": "https://opensource.org/licenses/MIT",
-    },
-    terms_of_service="https://example.com/terms/",
     openapi_tags=openapi_tags,
     root_path=os.getenv('ROOT_PATH', '/'),
     root_path_in_servers=False,
