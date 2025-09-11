@@ -6,11 +6,13 @@ from fastapi import FastAPI
 from . import dependencies
 from .routes.send_email import send_router
 from .routes.read_email import read_router
+from .routes.imap import imap_router
 
 
 openapi_tags = [
     {"name": "Send", "description": "Endpoints for sending emails"},
     {"name": "Read", "description": "Endpoints for reading emails"},
+    {"name": "IMAP", "description": "Low-level IMAP operations"},
 ]
 
 
@@ -45,3 +47,4 @@ async def startup_event() -> None:
 # Include routers for feature modules
 app.include_router(send_router)
 app.include_router(read_router)
+app.include_router(imap_router)

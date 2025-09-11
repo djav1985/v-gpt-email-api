@@ -13,7 +13,7 @@ os.environ["ACCOUNT_IMAP_PORT"] = "993"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.main import app  # noqa: E402
-from app.services import imap_client
+from app.routes import imap
 from app.models import EmailSummary
 from app import dependencies
 from datetime import datetime
@@ -27,7 +27,7 @@ def test_get_folders(monkeypatch):
     async def mock_list_mailboxes():
         return ["INBOX", "Archive"]
 
-    monkeypatch.setattr(imap_client, "list_mailboxes", mock_list_mailboxes)
+    monkeypatch.setattr(imap, "list_mailboxes", mock_list_mailboxes)
     response = client.get("/folders")
     assert response.status_code == 200
     assert response.json() == ["INBOX", "Archive"]
@@ -39,7 +39,7 @@ def test_get_emails(monkeypatch):
     async def mock_fetch_messages(folder: str, limit: int, unread_only: bool):
         return sample
 
-    monkeypatch.setattr(imap_client, "fetch_messages", mock_fetch_messages)
+    monkeypatch.setattr(imap, "fetch_messages", mock_fetch_messages)
     response = client.get("/emails?folder=INBOX&limit=1")
     assert response.status_code == 200
     data = response.json()
@@ -54,7 +54,7 @@ def test_move_email(monkeypatch):
         called["folder"] = folder
         called["source"] = source_folder
 
-    monkeypatch.setattr(imap_client, "move_message", mock_move)
+    monkeypatch.setattr(imap, "move_message", mock_move)
     response = client.post("/emails/1/move?folder=Archive&source_folder=Old")
     assert response.status_code == 200
     assert called == {"uid": "1", "folder": "Archive", "source": "Old"}
@@ -68,7 +68,7 @@ def test_delete_email(monkeypatch):
         called["uid"] = uid
         called["folder"] = folder
 
-    monkeypatch.setattr(imap_client, "delete_message", mock_delete)
+    monkeypatch.setattr(imap, "delete_message", mock_delete)
     response = client.delete("/emails/2?folder=INBOX")
     assert response.status_code == 200
     assert called == {"uid": "2", "folder": "INBOX"}
@@ -90,9 +90,9 @@ def test_forward_email(monkeypatch):
     async def mock_send(to, subject, body, file_urls, headers):
         sent.update({"to": to, "subject": subject, "body": body, "headers": headers, "files": file_urls})
 
-    monkeypatch.setattr(imap_client, "fetch_message", mock_fetch)
-    monkeypatch.setattr(imap_client, "extract_body", lambda msg: "body")
-    monkeypatch.setattr(imap_client, "decode_header_value", lambda v: v)
+    monkeypatch.setattr(imap, "fetch_message", mock_fetch)
+    monkeypatch.setattr(imap, "extract_body", lambda msg: "body")
+    monkeypatch.setattr(imap, "decode_header_value", lambda v: v)
     monkeypatch.setattr("app.routes.read_email.send_email", mock_send)
     response = client.post(
         "/emails/1/forward",
@@ -121,9 +121,9 @@ def test_reply_email(monkeypatch):
     async def mock_send(to, subject, body, file_urls, headers):
         sent.update({"to": to, "subject": subject, "body": body, "headers": headers, "files": file_urls})
 
-    monkeypatch.setattr(imap_client, "fetch_message", mock_fetch)
-    monkeypatch.setattr(imap_client, "extract_body", lambda msg: "orig body")
-    monkeypatch.setattr(imap_client, "decode_header_value", lambda v: v)
+    monkeypatch.setattr(imap, "fetch_message", mock_fetch)
+    monkeypatch.setattr(imap, "extract_body", lambda msg: "orig body")
+    monkeypatch.setattr(imap, "decode_header_value", lambda v: v)
     monkeypatch.setattr("app.routes.read_email.send_email", mock_send)
     response = client.post(
         "/emails/2/reply",
@@ -142,7 +142,7 @@ def test_create_draft(monkeypatch):
     async def mock_append(folder, msg):
         called["folder"] = folder
 
-    monkeypatch.setattr(imap_client, "append_message", mock_append)
+    monkeypatch.setattr(imap, "append_message", mock_append)
     response = client.post(
         "/drafts",
         json={"to_addresses": ["x@y.com"], "subject": "S", "body": "B", "file_url": None},
@@ -154,7 +154,7 @@ def test_create_draft(monkeypatch):
 def test_get_folders_error(monkeypatch):
     async def fail():
         raise RuntimeError("boom")
-    monkeypatch.setattr(imap_client, "list_mailboxes", fail)
+    monkeypatch.setattr(imap, "list_mailboxes", fail)
     resp = client.get("/folders")
     assert resp.status_code == 500
 
@@ -162,7 +162,7 @@ def test_get_folders_error(monkeypatch):
 def test_get_emails_error(monkeypatch):
     async def fail(folder, limit, unread_only):
         raise RuntimeError("boom")
-    monkeypatch.setattr(imap_client, "fetch_messages", fail)
+    monkeypatch.setattr(imap, "fetch_messages", fail)
     resp = client.get("/emails")
     assert resp.status_code == 500
 
@@ -170,7 +170,7 @@ def test_get_emails_error(monkeypatch):
 def test_move_email_error(monkeypatch):
     async def fail(uid, folder, source_folder):
         raise RuntimeError("boom")
-    monkeypatch.setattr(imap_client, "move_message", fail)
+    monkeypatch.setattr(imap, "move_message", fail)
     resp = client.post("/emails/1/move?folder=Archive")
     assert resp.status_code == 500
 

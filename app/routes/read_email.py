@@ -6,7 +6,7 @@ from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from ..dependencies import get_api_key, send_email
 from ..models import EmailSummary, ErrorResponse, MessageResponse, SendEmailRequest
-from ..services import imap_client
+from . import imap
 from .. import dependencies
 
 read_router = APIRouter(tags=["Read"])
@@ -88,7 +88,7 @@ async def get_emails(
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> list[EmailSummary]:
     try:
-        return await imap_client.fetch_messages(folder, limit, unread)
+        return await imap.fetch_messages(folder, limit, unread)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -154,7 +154,7 @@ async def get_emails(
 )
 async def get_folders() -> list[str]:
     try:
-        return await imap_client.list_mailboxes()
+        return await imap.list_mailboxes()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -227,7 +227,7 @@ async def move_email(
     source_folder: str = Query("INBOX", description="Source folder"),
 ) -> MessageResponse:
     try:
-        await imap_client.move_message(uid, folder, source_folder)
+        await imap.move_message(uid, folder, source_folder)
         return MessageResponse(message="Email moved")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -312,9 +312,9 @@ async def forward_email(
     ),
 ) -> MessageResponse:
     try:
-        original = await imap_client.fetch_message(uid)
-        body = imap_client.extract_body(original)
-        subject = request.subject or imap_client.decode_header_value(original.get("Subject", ""))
+        original = await imap.fetch_message(uid)
+        body = imap.extract_body(original)
+        subject = request.subject or imap.decode_header_value(original.get("Subject", ""))
         msg_id = original.get("Message-ID")
         headers = {}
         if msg_id:
@@ -410,9 +410,9 @@ async def reply_email(
     ),
 ) -> MessageResponse:
     try:
-        original = await imap_client.fetch_message(uid)
-        body = request.body or imap_client.extract_body(original)
-        subj = imap_client.decode_header_value(original.get("Subject", ""))
+        original = await imap.fetch_message(uid)
+        body = request.body or imap.extract_body(original)
+        subj = imap.decode_header_value(original.get("Subject", ""))
         subject = request.subject or f"Re: {subj}"
         msg_id = original.get("Message-ID")
         headers = {}
@@ -497,7 +497,7 @@ async def delete_email(
     folder: str = Query("INBOX", description="Folder containing the email"),
 ) -> MessageResponse:
     try:
-        await imap_client.delete_message(uid, folder)
+        await imap.delete_message(uid, folder)
         return MessageResponse(message="Email deleted")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -588,7 +588,7 @@ async def create_draft(
     msg["Subject"] = request.subject
     msg.attach(MIMEText(request.body, "html"))
     try:
-        await imap_client.append_message("Drafts", msg)
+        await imap.append_message("Drafts", msg)
         return MessageResponse(message="Draft stored")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
