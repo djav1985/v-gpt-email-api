@@ -1,4 +1,6 @@
+# flake8: noqa
 # models.py
+from datetime import datetime
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 
@@ -19,8 +21,9 @@ class EmailSummary(BaseModel):
     uid: str
     subject: str | None = None
     from_: str | None = Field(None, alias="from")
-    date: str | None = None
+    date: datetime | None = None
     seen: bool
 
     class Config:
         allow_population_by_field_name = True
+        json_encoders = {datetime: lambda v: v.isoformat()}

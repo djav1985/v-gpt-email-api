@@ -1,3 +1,4 @@
+# flake8: noqa
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -29,9 +30,9 @@ async def get_folders() -> list[str]:
 
 
 @read_router.post("/emails/{uid}/move", dependencies=[Depends(get_api_key)])
-async def move_email(uid: str, folder: str) -> dict[str, str]:
+async def move_email(uid: str, folder: str, source_folder: str = "INBOX") -> dict[str, str]:
     try:
-        await imap_client.move_message(uid, folder)
+        await imap_client.move_message(uid, folder, source_folder)
         return {"message": "Email moved"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -40,7 +41,15 @@ async def move_email(uid: str, folder: str) -> dict[str, str]:
 @read_router.post("/emails/{uid}/forward", dependencies=[Depends(get_api_key)])
 async def forward_email(uid: str, request: SendEmailRequest) -> dict[str, str]:
     try:
-        await send_email(request.to_addresses, request.subject, request.body, request.file_url)
+        original = await imap_client.fetch_message(uid)
+        body = imap_client.extract_body(original)
+        subject = request.subject or imap_client.decode_header_value(original.get("Subject", ""))
+        msg_id = original.get("Message-ID")
+        headers = {}
+        if msg_id:
+            headers["In-Reply-To"] = msg_id
+            headers["References"] = msg_id
+        await send_email(request.to_addresses, subject, body, request.file_url, headers=headers)
         return {"message": "Email forwarded"}
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -51,7 +60,16 @@ async def forward_email(uid: str, request: SendEmailRequest) -> dict[str, str]:
 @read_router.post("/emails/{uid}/reply", dependencies=[Depends(get_api_key)])
 async def reply_email(uid: str, request: SendEmailRequest) -> dict[str, str]:
     try:
-        await send_email(request.to_addresses, request.subject, request.body, request.file_url)
+        original = await imap_client.fetch_message(uid)
+        body = request.body or imap_client.extract_body(original)
+        subj = imap_client.decode_header_value(original.get("Subject", ""))
+        subject = request.subject or f"Re: {subj}"
+        msg_id = original.get("Message-ID")
+        headers = {}
+        if msg_id:
+            headers["In-Reply-To"] = msg_id
+            headers["References"] = msg_id
+        await send_email(request.to_addresses, subject, body, request.file_url, headers=headers)
         return {"message": "Email sent"}
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

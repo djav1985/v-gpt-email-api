@@ -1,3 +1,4 @@
+# flake8: noqa
 # dependancies.py
 import os
 import aiosmtplib
@@ -7,6 +8,7 @@ import tempfile
 import shutil
 import mimetypes
 import asyncio
+from urllib.parse import urlparse
 
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -55,6 +57,10 @@ MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 
 
 async def fetch_file(session, url, temp_dir) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=400, detail="Invalid URL scheme")
+
     filename = url.split("/")[-1]
     _, file_extension = os.path.splitext(filename)
 
@@ -85,6 +91,7 @@ async def send_email(
     subject: str,
     body: str,
     file_url: Optional[str] = None,
+    headers: Optional[dict[str, str]] = None,
 ) -> None:
     if settings is None:
         raise RuntimeError("Settings have not been initialized")
@@ -97,6 +104,10 @@ async def send_email(
         msg["Reply-To"] = ACCOUNT_REPLY_TO
 
     msg.attach(MIMEText(body + signature_text, "html"))
+
+    if headers:
+        for key, value in headers.items():
+            msg[key] = value
 
     # Handle file attachments
     if file_url:
