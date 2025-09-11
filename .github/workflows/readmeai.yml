@@ -32,7 +32,8 @@ jobs:
             --badge-style flat-square \
             --header-style classic \
             --navigation-style number \
-            --tree-depth 5
+            --tree-max-depth 5 \
+            --logo llm
 
       - name: Commit and push updated README
         run: |
