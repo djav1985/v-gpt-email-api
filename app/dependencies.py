@@ -18,22 +18,12 @@ from email import encoders
 
 from typing import Optional
 
-
-# Environment variables
-ACCOUNT_EMAIL = os.getenv("ACCOUNT_EMAIL")
-ACCOUNT_PASSWORD = os.getenv("ACCOUNT_PASSWORD")
-ACCOUNT_SMTP_SERVER = os.getenv("ACCOUNT_SMTP_SERVER")
-ACCOUNT_SMTP_PORT = os.getenv("ACCOUNT_SMTP_PORT")
-ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
-FROM_NAME = os.getenv("FROM_NAME", "Your Friendly AI")
-SIGNATURE_PATH = "/app/sig/signature.html"
+from pydantic import EmailStr, Field
+from pydantic_settings import BaseSettings
 
 
-def validate_smtp_config() -> None:
-    """Validate required SMTP configuration at startup."""
-    global ACCOUNT_SMTP_PORT
-    if not all([ACCOUNT_EMAIL, ACCOUNT_PASSWORD, ACCOUNT_SMTP_SERVER, ACCOUNT_SMTP_PORT]):
-        raise RuntimeError("SMTP configuration is incomplete")
+class Config(BaseSettings):
+    """Application configuration loaded from environment variables."""
 
     if ACCOUNT_SMTP_PORT is not None:
         ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
@@ -79,44 +69,39 @@ async def fetch_file(session, url, temp_dir) -> str:
         return file_path
 
 async def send_email(
-    to_address: str,
+    to_addresses: list[EmailStr],
     subject: str,
     body: str,
     file_url: Optional[str] = None,
 ) -> None:
+    if settings is None:
+        raise RuntimeError("Settings have not been initialized")
+
     msg = MIMEMultipart()
-    # Convert to_address string into a list of email addresses
-    to_addresses = [address.strip() for address in to_address.split(",")]
-    msg["From"] = f"{FROM_NAME} <{ACCOUNT_EMAIL}>"
+    msg["From"] = f"{settings.from_name} <{settings.account_email}>"
     msg["To"] = ", ".join(to_addresses)
     msg["Subject"] = subject
     if ACCOUNT_REPLY_TO is not None:
         msg["Reply-To"] = ACCOUNT_REPLY_TO
 
-    # Add the email body and optional signature
-    signature = ""
-    if os.path.exists(SIGNATURE_PATH) and os.access(SIGNATURE_PATH, os.R_OK):
-        async with aiofiles.open(SIGNATURE_PATH, "r") as file:
-            signature = await file.read()
-    else:
-        print("Signature file not found or is not readable. Proceeding without it.")
-
-    msg.attach(MIMEText(body + signature, "html"))
+    msg.attach(MIMEText(body + signature_text, "html"))
 
     # Handle file attachments
     if file_url:
-        # Convert the file_url string into a list of URLs
         file_urls = [url.strip() for url in file_url.split(",")]
 
         total_size = 0
         temp_dir = tempfile.mkdtemp()
+        semaphore = asyncio.Semaphore(settings.attachment_concurrency)
+        connector = aiohttp.TCPConnector(limit=settings.attachment_concurrency)
+
+        async def sem_fetch(url: str) -> str:
+            async with semaphore:
+                return await fetch_file(session, url, temp_dir)
 
         try:
-            async with aiohttp.ClientSession() as session:
-                # Download all files concurrently
-                file_paths = await asyncio.gather(
-                    *(fetch_file(session, url, temp_dir) for url in file_urls)
-                )
+            async with aiohttp.ClientSession(connector=connector) as session:
+                file_paths = await asyncio.gather(*(sem_fetch(url) for url in file_urls))
 
                 for file_path in file_paths:
                     file_size = os.path.getsize(file_path)
@@ -162,11 +147,11 @@ async def send_email(
     try:
         await aiosmtplib.send(
             msg,
-            hostname=ACCOUNT_SMTP_SERVER,
-            port=ACCOUNT_SMTP_PORT,
-            username=ACCOUNT_EMAIL,
-            password=ACCOUNT_PASSWORD,
-            start_tls=True,
+            hostname=settings.account_smtp_server,
+            port=settings.account_smtp_port,
+            username=settings.account_email,
+            password=settings.account_password,
+            start_tls=settings.start_tls,
         )
     except aiosmtplib.errors.SMTPException as e:
         print(f"SMTPException: {str(e)}")
