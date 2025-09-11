@@ -1,8 +1,8 @@
 import os
-import logging
+from typing import AsyncGenerator, Any
 import aiofiles
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 
@@ -17,11 +17,10 @@ tags_metadata = [
     {"name": "Read", "description": "Endpoints for reading emails"},
     {"name": "IMAP", "description": "Low-level IMAP operations"},
 ]
-logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(app) -> AsyncGenerator[None, None]:
     required = [
         "ACCOUNT_EMAIL",
         "ACCOUNT_PASSWORD",
@@ -30,24 +29,23 @@ async def lifespan(app):
         "ACCOUNT_IMAP_SERVER",
         "ACCOUNT_IMAP_PORT",
     ]
-    missing = [var for var in required if not os.getenv(var)]
+    env = {var: os.getenv(var) for var in required}
+    missing = [var for var, val in env.items() if val is None]
     if missing:
-        logger.error("Missing required environment variables: %s", ", ".join(missing))
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing)}"
         )
-    try:
-        smtp_port = int(os.getenv("ACCOUNT_SMTP_PORT"))
-        imap_port = int(os.getenv("ACCOUNT_IMAP_PORT"))
-    except (TypeError, ValueError) as exc:
-        raise RuntimeError("Invalid SMTP or IMAP port") from exc
+    # All env values are str, not None, so cast for type checkers
+    from typing import cast
+    smtp_port = int(cast(str, env["ACCOUNT_SMTP_PORT"]))
+    imap_port = int(cast(str, env["ACCOUNT_IMAP_PORT"]))
 
     dependencies.settings = dependencies.Config(
-        account_email=os.getenv("ACCOUNT_EMAIL"),
-        account_password=os.getenv("ACCOUNT_PASSWORD"),
-        account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER"),
+        account_email=cast(str, env["ACCOUNT_EMAIL"]),
+        account_password=cast(str, env["ACCOUNT_PASSWORD"]),
+        account_smtp_server=cast(str, env["ACCOUNT_SMTP_SERVER"]),
         account_smtp_port=smtp_port,
-        account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER"),
+        account_imap_server=cast(str, env["ACCOUNT_IMAP_SERVER"]),
         account_imap_port=imap_port,
     )
     try:
@@ -110,7 +108,7 @@ app.openapi = custom_openapi
 
 
 @app.exception_handler(HTTPException)
-def http_exception_handler(request: Request, exc: HTTPException):
+def http_exception_handler(exc: HTTPException) -> JSONResponse:
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
