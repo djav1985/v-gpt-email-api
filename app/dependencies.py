@@ -35,7 +35,8 @@ def validate_smtp_config() -> None:
     if not all([ACCOUNT_EMAIL, ACCOUNT_PASSWORD, ACCOUNT_SMTP_SERVER, ACCOUNT_SMTP_PORT]):
         raise RuntimeError("SMTP configuration is incomplete")
 
-    ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
+    if ACCOUNT_SMTP_PORT is not None:
+        ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
 
 ALLOWED_FILE_TYPES = {
     ".zip",
@@ -89,7 +90,8 @@ async def send_email(
     msg["From"] = f"{FROM_NAME} <{ACCOUNT_EMAIL}>"
     msg["To"] = ", ".join(to_addresses)
     msg["Subject"] = subject
-    msg["Reply-To"] = ACCOUNT_REPLY_TO
+    if ACCOUNT_REPLY_TO is not None:
+        msg["Reply-To"] = ACCOUNT_REPLY_TO
 
     # Add the email body and optional signature
     signature = ""
