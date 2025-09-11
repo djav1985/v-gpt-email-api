@@ -26,6 +26,8 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - OpenAPI metadata now declares version 3.1.0 and derives the server URL from `BASE_URL` and `ROOT_PATH` environment variables.
 - Streaming attachment downloads to disk to limit memory usage.
 - Added `requirements-dev.txt` with `pytest` and `pytest-asyncio`, and documented test execution steps.
+- `FoldersResponse` and `EmailBody` models for structured folder and body responses.
+- `ErrorCode` enumeration for standardized error codes.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
@@ -37,6 +39,9 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - `limit` query parameters on email listing routes must be positive.
 - Console prints replaced with structured logging; logging configuration is now left to the host environment.
 - Startup now validates required environment variables before initializing settings.
+- Folder listing endpoints now return `FoldersResponse` instead of a raw list.
+- `Config` now uses `BaseSettings` for environment loading and is instantiated directly.
+- `EmailSummary.from_` validated as `EmailStr`.
 - Shared IMAP operations consolidated into reusable helpers.
 - API key retrieval and HTTP exception handling are now synchronous.
 - Forward and reply endpoints accept an optional folder parameter.

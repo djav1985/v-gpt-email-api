@@ -1,4 +1,4 @@
-# dependancies.py
+# dependencies.py
 import os
 import logging
 import aiosmtplib

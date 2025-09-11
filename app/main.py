@@ -1,7 +1,8 @@
 import os
-from typing import AsyncGenerator, Any
+from typing import AsyncGenerator
 import aiofiles
 from contextlib import asynccontextmanager
+from pydantic import ValidationError
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
@@ -10,7 +11,6 @@ from . import dependencies
 from .routes.send_email import send_router
 from .routes.read_email import read_router
 from .routes.imap import imap_router
-
 
 tags_metadata = [
     {"name": "Send", "description": "Endpoints for sending emails"},
@@ -21,33 +21,18 @@ tags_metadata = [
 
 @asynccontextmanager
 async def lifespan(app) -> AsyncGenerator[None, None]:
-    required = [
-        "ACCOUNT_EMAIL",
-        "ACCOUNT_PASSWORD",
-        "ACCOUNT_SMTP_SERVER",
-        "ACCOUNT_SMTP_PORT",
-        "ACCOUNT_IMAP_SERVER",
-        "ACCOUNT_IMAP_PORT",
-    ]
-    env = {var: os.getenv(var) for var in required}
-    missing = [var for var, val in env.items() if val is None]
-    if missing:
+    try:
+        dependencies.settings = dependencies.Config()
+    except ValidationError as exc:
+        missing = [
+            ".".join(str(loc) for loc in err["loc"]).upper()
+            for err in exc.errors()
+            if err.get("type") == "missing"
+        ]
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing)}"
-        )
-    # All env values are str, not None, so cast for type checkers
-    from typing import cast
-    smtp_port = int(cast(str, env["ACCOUNT_SMTP_PORT"]))
-    imap_port = int(cast(str, env["ACCOUNT_IMAP_PORT"]))
+        ) from exc
 
-    dependencies.settings = dependencies.Config(
-        account_email=cast(str, env["ACCOUNT_EMAIL"]),
-        account_password=cast(str, env["ACCOUNT_PASSWORD"]),
-        account_smtp_server=cast(str, env["ACCOUNT_SMTP_SERVER"]),
-        account_smtp_port=smtp_port,
-        account_imap_server=cast(str, env["ACCOUNT_IMAP_SERVER"]),
-        account_imap_port=imap_port,
-    )
     try:
         async with aiofiles.open("config/signature.txt", "r") as file:
             dependencies.signature_text = await file.read()
@@ -74,7 +59,7 @@ app = FastAPI(
 )
 
 
-# Include routers for feature modules
+# Routers
 app.include_router(send_router)
 app.include_router(read_router)
 app.include_router(imap_router)

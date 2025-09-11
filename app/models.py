@@ -1,7 +1,10 @@
 # models.py
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Optional
 
+from enum import Enum
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
 
@@ -60,7 +63,7 @@ class EmailSummary(BaseModel):
         description="Subject line of the email.",
         json_schema_extra={"example": "Hello"},
     )
-    from_: str | None = Field(
+    from_: EmailStr | None = Field(
         default=None,
         alias="from",
         max_length=255,
@@ -99,8 +102,24 @@ class ErrorResponse(BaseModel):
         description="Error message detail.",
         json_schema_extra={"example": "Invalid request"},
     )
-    code: str | None = Field(
+    code: ErrorCode | None = Field(
         default=None,
         description="Optional error code.",
         json_schema_extra={"example": "invalid_request"},
     )
+
+
+class ErrorCode(str, Enum):
+    invalid_request = "invalid_request"
+    not_authenticated = "not_authenticated"
+    not_authorized = "not_authorized"
+    not_found = "not_found"
+    server_error = "server_error"
+
+
+class FoldersResponse(BaseModel):
+    folders: list[str]
+
+
+class EmailBody(BaseModel):
+    body: str

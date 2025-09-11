@@ -188,7 +188,7 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 
    | Method & Path | Description |
    | --- | --- |
-   | `GET /folders` | List available mailboxes. |
+  | `GET /folders` | List available mailboxes (returns `{\"folders\": [...]}`). |
    | `GET /emails` | Retrieve messages from a folder with optional `limit`, `unread`, and `folder` query parameters. |
    | `POST /emails/{uid}/move` | Move an email to another folder via the `folder` query parameter. |
    | `POST /emails/{uid}/forward` | Forward a message using the same payload as the send endpoint. |
