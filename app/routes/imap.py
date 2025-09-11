@@ -1,4 +1,3 @@
-# flake8: noqa
 import asyncio
 import email
 import imaplib
@@ -35,7 +34,9 @@ def _extract_body(msg: email.message.Message) -> str:
         for part in msg.walk():
             if part.get_content_type() == "text/plain" and not part.get_filename():
                 payload = part.get_payload(decode=True)
-                return payload.decode(part.get_content_charset() or "utf-8", errors="ignore")
+                return payload.decode(
+                    part.get_content_charset() or "utf-8", errors="ignore"
+                )
     else:
         payload = msg.get_payload(decode=True)
         if payload:
@@ -57,7 +58,10 @@ async def list_mailboxes() -> list[str]:
             dependencies.settings.account_imap_server,
             dependencies.settings.account_imap_port,
         ) as imap:
-            imap.login(dependencies.settings.account_email, dependencies.settings.account_password)
+            imap.login(
+                dependencies.settings.account_email,
+                dependencies.settings.account_password,
+            )
             typ, data = imap.list()
             if typ != "OK" or data is None:
                 return []
@@ -75,7 +79,9 @@ async def list_mailboxes() -> list[str]:
     return await asyncio.to_thread(inner)
 
 
-async def fetch_messages(folder: str = "INBOX", limit: int = 10, unread_only: bool = False) -> list[EmailSummary]:
+async def fetch_messages(
+    folder: str = "INBOX", limit: int = 10, unread_only: bool = False
+) -> list[EmailSummary]:
     """Fetch message headers from a folder and return summaries."""
 
     def inner() -> list[EmailSummary]:
@@ -85,7 +91,10 @@ async def fetch_messages(folder: str = "INBOX", limit: int = 10, unread_only: bo
             dependencies.settings.account_imap_server,
             dependencies.settings.account_imap_port,
         ) as imap:
-            imap.login(dependencies.settings.account_email, dependencies.settings.account_password)
+            imap.login(
+                dependencies.settings.account_email,
+                dependencies.settings.account_password,
+            )
             imap.select(folder)
             criteria = "UNSEEN" if unread_only else "ALL"
             typ, data = imap.search(None, criteria)
@@ -96,19 +105,27 @@ async def fetch_messages(folder: str = "INBOX", limit: int = 10, unread_only: bo
                 uids = uids[-limit:]
             summaries: list[EmailSummary] = []
             for uid in uids:
-                typ, msg_data = imap.uid('fetch', uid, '(RFC822.HEADER FLAGS)')
+                typ, msg_data = imap.uid("fetch", uid, "(RFC822.HEADER FLAGS)")
                 if typ != "OK" or msg_data is None:
                     continue
                 header_bytes = msg_data[0][1]
                 flag_info = msg_data[0][0].decode()
                 msg = email.message_from_bytes(header_bytes)
-                subject = _decode_header(msg.get('Subject', ''))
-                from_raw = _decode_header(msg.get('From', ''))
+                subject = _decode_header(msg.get("Subject", ""))
+                from_raw = _decode_header(msg.get("From", ""))
                 from_ = email.utils.parseaddr(from_raw)[1]
-                date_raw = msg.get('Date', '')
+                date_raw = msg.get("Date", "")
                 date = parsedate_to_datetime(date_raw) if date_raw else None
                 seen = "\\Seen" in flag_info
-                summaries.append(EmailSummary(uid=uid.decode(), subject=subject or "", from_=from_, date=date, seen=seen))
+                summaries.append(
+                    EmailSummary(
+                        uid=uid.decode(),
+                        subject=subject or "",
+                        from_=from_,
+                        date=date,
+                        seen=seen,
+                    )
+                )
             return summaries
 
     return await asyncio.to_thread(inner)
@@ -124,7 +141,10 @@ async def move_message(uid: str, folder: str, source_folder: str = "INBOX") -> N
             dependencies.settings.account_imap_server,
             dependencies.settings.account_imap_port,
         ) as imap:
-            imap.login(dependencies.settings.account_email, dependencies.settings.account_password)
+            imap.login(
+                dependencies.settings.account_email,
+                dependencies.settings.account_password,
+            )
             imap.select(source_folder)
             imap.uid("COPY", uid, folder)
             imap.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
@@ -143,7 +163,10 @@ async def delete_message(uid: str, folder: str = "INBOX") -> None:
             dependencies.settings.account_imap_server,
             dependencies.settings.account_imap_port,
         ) as imap:
-            imap.login(dependencies.settings.account_email, dependencies.settings.account_password)
+            imap.login(
+                dependencies.settings.account_email,
+                dependencies.settings.account_password,
+            )
             imap.select(folder)
             imap.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
             imap.expunge()
@@ -161,8 +184,13 @@ async def append_message(folder: str, msg: MIMEMultipart) -> None:
             dependencies.settings.account_imap_server,
             dependencies.settings.account_imap_port,
         ) as imap:
-            imap.login(dependencies.settings.account_email, dependencies.settings.account_password)
-            imap.append(folder, "", imaplib.Time2Internaldate(time.time()), msg.as_bytes())
+            imap.login(
+                dependencies.settings.account_email,
+                dependencies.settings.account_password,
+            )
+            imap.append(
+                folder, "", imaplib.Time2Internaldate(time.time()), msg.as_bytes()
+            )
 
     await asyncio.to_thread(inner)
 
@@ -190,7 +218,9 @@ async def fetch_message(uid: str, folder: str = "INBOX") -> email.message.Messag
     return await asyncio.to_thread(inner)
 
 
-async def move_email_action(uid: str, folder: str, source_folder: str = "INBOX") -> MessageResponse:
+async def move_email_action(
+    uid: str, folder: str, source_folder: str = "INBOX"
+) -> MessageResponse:
     try:
         await move_message(uid, folder, source_folder)
         return MessageResponse(message="Email moved")
@@ -208,7 +238,9 @@ async def delete_email_action(uid: str, folder: str = "INBOX") -> MessageRespons
 
 async def create_draft_action(request: SendEmailRequest) -> MessageResponse:
     if dependencies.settings is None:
-        raise HTTPException(status_code=500, detail="Settings have not been initialized")
+        raise HTTPException(
+            status_code=500, detail="Settings have not been initialized"
+        )
     msg = MIMEMultipart()
     msg["From"] = dependencies.settings.account_email
     msg["To"] = ", ".join(request.to_addresses)
@@ -232,7 +264,9 @@ async def get_folders() -> list[str]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@imap_router.get("/emails", response_model=list[EmailSummary], dependencies=[Security(get_api_key)])
+@imap_router.get(
+    "/emails", response_model=list[EmailSummary], dependencies=[Security(get_api_key)]
+)
 async def get_emails(
     folder: str = Query("INBOX", description="Mail folder to read from"),
     limit: int = Query(10, gt=0, description="Maximum number of emails to return"),
@@ -244,7 +278,11 @@ async def get_emails(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@imap_router.post("/emails/{uid}/move", dependencies=[Security(get_api_key)], response_model=MessageResponse)
+@imap_router.post(
+    "/emails/{uid}/move",
+    dependencies=[Security(get_api_key)],
+    response_model=MessageResponse,
+)
 async def move_email(
     uid: str = Path(..., description="UID of the email to move"),
     folder: str = Query(..., description="Destination folder"),
@@ -253,8 +291,14 @@ async def move_email(
     return await move_email_action(uid, folder, source_folder)
 
 
-@imap_router.delete("/emails/{uid}", dependencies=[Security(get_api_key)], response_model=MessageResponse)
-async def delete_email(uid: str = Path(...), folder: str = Query("INBOX")) -> MessageResponse:
+@imap_router.delete(
+    "/emails/{uid}",
+    dependencies=[Security(get_api_key)],
+    response_model=MessageResponse,
+)
+async def delete_email(
+    uid: str = Path(...), folder: str = Query("INBOX")
+) -> MessageResponse:
     return await delete_email_action(uid, folder)
 
 
@@ -267,6 +311,8 @@ async def get_email(uid: str = Path(...), folder: str = Query("INBOX")) -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@imap_router.post("/drafts", dependencies=[Security(get_api_key)], response_model=MessageResponse)
+@imap_router.post(
+    "/drafts", dependencies=[Security(get_api_key)], response_model=MessageResponse
+)
 async def create_draft(request: SendEmailRequest = Body(...)) -> MessageResponse:
     return await create_draft_action(request)

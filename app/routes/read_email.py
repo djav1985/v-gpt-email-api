@@ -1,4 +1,3 @@
-# flake8: noqa
 from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from ..dependencies import get_api_key, send_email
@@ -46,7 +45,10 @@ read_router = APIRouter(tags=["Read"])
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },
@@ -97,11 +99,7 @@ async def get_emails(
     description="List available mail folders.",
     operation_id="list_folders",
     responses={
-        200: {
-            "content": {
-                "application/json": {"example": ["INBOX", "Archive"]}
-            }
-        },
+        200: {"content": {"application/json": {"example": ["INBOX", "Archive"]}}},
         400: {
             "model": ErrorResponse,
             "description": "Invalid request",
@@ -116,7 +114,10 @@ async def get_emails(
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },
@@ -164,13 +165,7 @@ async def get_folders() -> list[str]:
     response_model=MessageResponse,
     operation_id="move_email",
     responses={
-        200: {
-            "content": {
-                "application/json": {
-                    "example": {"message": "Email moved"}
-                }
-            }
-        },
+        200: {"content": {"application/json": {"example": {"message": "Email moved"}}}},
         400: {
             "model": ErrorResponse,
             "description": "Invalid request",
@@ -185,7 +180,10 @@ async def get_folders() -> list[str]:
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },
@@ -235,11 +233,7 @@ async def move_email(
     operation_id="forward_email",
     responses={
         200: {
-            "content": {
-                "application/json": {
-                    "example": {"message": "Email forwarded"}
-                }
-            }
+            "content": {"application/json": {"example": {"message": "Email forwarded"}}}
         },
         400: {
             "model": ErrorResponse,
@@ -255,7 +249,10 @@ async def move_email(
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },
@@ -303,14 +300,15 @@ async def forward_email(
             }
         },
     ),
+    folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> MessageResponse:
     try:
-        original = await imap.fetch_message(uid)
+        original = await imap.fetch_message(uid, folder)
         original_body = imap.extract_body(original)
-        body = (
-            f"{request.body}\n\n{original_body}" if request.body else original_body
+        body = f"{request.body}\n\n{original_body}" if request.body else original_body
+        subject = request.subject or imap.decode_header_value(
+            original.get("Subject", "")
         )
-        subject = request.subject or imap.decode_header_value(original.get("Subject", ""))
         msg_id = original.get("Message-ID")
         headers = {}
         if msg_id:
@@ -335,13 +333,7 @@ async def forward_email(
     response_model=MessageResponse,
     operation_id="reply_email",
     responses={
-        200: {
-            "content": {
-                "application/json": {
-                    "example": {"message": "Email sent"}
-                }
-            }
-        },
+        200: {"content": {"application/json": {"example": {"message": "Email sent"}}}},
         400: {
             "model": ErrorResponse,
             "description": "Invalid request",
@@ -356,7 +348,10 @@ async def forward_email(
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },
@@ -404,9 +399,10 @@ async def reply_email(
             }
         },
     ),
+    folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> MessageResponse:
     try:
-        original = await imap.fetch_message(uid)
+        original = await imap.fetch_message(uid, folder)
         body = request.body or imap.extract_body(original)
         subj = imap.decode_header_value(original.get("Subject", ""))
         subject = request.subject or f"Re: {subj}"
@@ -435,11 +431,7 @@ async def reply_email(
     operation_id="delete_email",
     responses={
         200: {
-            "content": {
-                "application/json": {
-                    "example": {"message": "Email deleted"}
-                }
-            }
+            "content": {"application/json": {"example": {"message": "Email deleted"}}}
         },
         400: {
             "model": ErrorResponse,
@@ -455,7 +447,10 @@ async def reply_email(
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },
@@ -504,11 +499,7 @@ async def delete_email(
     operation_id="create_draft",
     responses={
         200: {
-            "content": {
-                "application/json": {
-                    "example": {"message": "Draft stored"}
-                }
-            }
+            "content": {"application/json": {"example": {"message": "Draft stored"}}}
         },
         400: {
             "model": ErrorResponse,
@@ -524,7 +515,10 @@ async def delete_email(
             "description": "Missing API key",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authenticated", "code": "not_authenticated"}
+                    "example": {
+                        "detail": "Not authenticated",
+                        "code": "not_authenticated",
+                    }
                 }
             },
         },

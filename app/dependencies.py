@@ -1,4 +1,3 @@
-# flake8: noqa
 # dependancies.py
 import os
 import logging
@@ -21,7 +20,7 @@ from email import encoders
 
 from typing import Optional
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr
 from pydantic_settings import BaseSettings
 
 
@@ -75,7 +74,9 @@ async def fetch_file(session, url, temp_dir) -> str:
 
     # Check if the file type is allowed
     if file_extension.lower() not in ALLOWED_FILE_TYPES:
-        raise HTTPException(status_code=400, detail=f"File type {file_extension} is not allowed")
+        raise HTTPException(
+            status_code=400, detail=f"File type {file_extension} is not allowed"
+        )
 
     # Set timeout for requests
     timeout = aiohttp.ClientTimeout(total=10)
@@ -96,6 +97,7 @@ async def fetch_file(session, url, temp_dir) -> str:
                 await out_file.write(chunk)
 
         return file_path
+
 
 async def send_email(
     to_addresses: list[EmailStr],
@@ -133,7 +135,9 @@ async def send_email(
 
         try:
             async with aiohttp.ClientSession(connector=connector) as session:
-                file_paths = await asyncio.gather(*(sem_fetch(url) for url in file_urls))
+                file_paths = await asyncio.gather(
+                    *(sem_fetch(url) for url in file_urls)
+                )
 
                 for file_path in file_paths:
                     file_size = os.path.getsize(file_path)
@@ -153,7 +157,9 @@ async def send_email(
                     total_size += file_size
                     mime_type, _ = mimetypes.guess_type(file_path)
                     main_type, sub_type = (
-                        mime_type.split("/") if mime_type else ("application", "octet-stream")
+                        mime_type.split("/")
+                        if mime_type
+                        else ("application", "octet-stream")
                     )
                     part = MIMEBase(main_type, sub_type)
 
@@ -170,7 +176,7 @@ async def send_email(
         except HTTPException as e:
             logger.error("HTTPException during file handling: %s", e.detail)
             raise
-        except Exception as e:
+        except Exception:
             logger.exception("Unexpected error during file handling")
             raise
         finally:
@@ -188,11 +194,12 @@ async def send_email(
     except aiosmtplib.errors.SMTPException as e:
         logger.error("SMTPException: %s", str(e))
         raise HTTPException(status_code=500, detail=f"SMTP server error: {str(e)}")
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error while sending email")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unexpected error")
 
-async def get_api_key(
+
+def get_api_key(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(api_key_scheme),
 ) -> Optional[str]:
     # Retrieve the API key from the environment
