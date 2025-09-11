@@ -22,6 +22,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Validation for required fields in email models, including recipient lists, subjects, bodies, messages, UIDs, and attachment URLs.
 - Standardized `ErrorResponse` model with example payloads and documented 401/403 responses.
 - Example request bodies and success responses for email routes and models.
+- OpenAPI metadata now declares version 3.1.0 and server URLs for development, staging, and production.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.

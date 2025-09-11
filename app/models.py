@@ -45,11 +45,35 @@ class SendEmailRequest(BaseModel):
 
 
 class EmailSummary(BaseModel):
-    uid: str = Field(..., min_length=1, example="1")
-    subject: str | None = Field(None, example="Hello")
-    from_: str | None = Field(None, alias="from", example="sender@example.com")
-    date: datetime | None = Field(None, example="2024-01-01T12:00:00Z")
-    seen: bool = Field(..., example=False)
+    uid: str = Field(
+        ...,
+        min_length=1,
+        description="Unique identifier of the email.",
+        example="1",
+    )
+    subject: str | None = Field(
+        None,
+        max_length=255,
+        description="Subject line of the email.",
+        example="Hello",
+    )
+    from_: str | None = Field(
+        None,
+        alias="from",
+        max_length=255,
+        description="Sender email address.",
+        example="sender@example.com",
+    )
+    date: datetime | None = Field(
+        None,
+        description="Date the email was sent.",
+        example="2024-01-01T12:00:00Z",
+    )
+    seen: bool = Field(
+        ...,
+        description="Whether the email has been read.",
+        example=False,
+    )
 
     class Config:
         allow_population_by_field_name = True
@@ -57,9 +81,23 @@ class EmailSummary(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    message: str = Field(..., min_length=1, example="Email sent")
+    message: str = Field(
+        ...,
+        min_length=1,
+        description="Human-readable response message.",
+        example="Email sent",
+    )
 
 
 class ErrorResponse(BaseModel):
-    detail: str = Field(..., example="Invalid request")
-    code: str | None = Field(None, example="invalid_request")
+    detail: str = Field(
+        ...,
+        min_length=1,
+        description="Error message detail.",
+        example="Invalid request",
+    )
+    code: str | None = Field(
+        None,
+        description="Optional error code.",
+        example="invalid_request",
+    )
