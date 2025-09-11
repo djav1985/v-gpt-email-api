@@ -31,7 +31,7 @@ jobs:
             --output readmeai.md \
             --badge-style flat-square \
             --header-style classic \
-            --navigation-style number \
+            --navigation-style bullet \
             --tree-max-depth 5 \
             --logo llm
 
