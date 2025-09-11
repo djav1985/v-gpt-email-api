@@ -106,7 +106,10 @@ async def forward_email(
         if msg_id:
             headers["In-Reply-To"] = msg_id
             headers["References"] = msg_id
-        await send_email(request.to_addresses, subject, body, request.file_url, headers=headers)
+        file_urls = [str(url) for url in request.file_url] if request.file_url else None
+        await send_email(
+            request.to_addresses, subject, body, file_urls=file_urls, headers=headers
+        )
         return MessageResponse(message="Email forwarded")
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -141,7 +144,10 @@ async def reply_email(
         if msg_id:
             headers["In-Reply-To"] = msg_id
             headers["References"] = msg_id
-        await send_email(request.to_addresses, subject, body, request.file_url, headers=headers)
+        file_urls = [str(url) for url in request.file_url] if request.file_url else None
+        await send_email(
+            request.to_addresses, subject, body, file_urls=file_urls, headers=headers
+        )
         return MessageResponse(message="Email sent")
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

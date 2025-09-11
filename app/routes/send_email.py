@@ -21,10 +21,14 @@ send_router = APIRouter(tags=["Send"])
 async def send_email_endpoint(request: SendEmailRequest) -> MessageResponse:
     subject = request.subject
     body = request.body
-    file_url = request.file_url
+    file_urls = (
+        [str(url) for url in request.file_url] if request.file_url else None
+    )
 
     try:
-        await send_email(request.to_addresses, subject, body, file_url)
+        await send_email(
+            request.to_addresses, subject, body, file_urls=file_urls
+        )
         return MessageResponse(message="Email sent successfully")
     except HTTPException as e:
         print(f"HTTPException: {e.detail}")

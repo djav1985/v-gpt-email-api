@@ -97,7 +97,7 @@ async def send_email(
     to_addresses: list[EmailStr],
     subject: str,
     body: str,
-    file_url: Optional[str] = None,
+    file_urls: Optional[list[str]] = None,
     headers: Optional[dict[str, str]] = None,
 ) -> None:
     if settings is None:
@@ -117,9 +117,7 @@ async def send_email(
             msg[key] = value
 
     # Handle file attachments
-    if file_url:
-        file_urls = [url.strip() for url in file_url.split(",")]
-
+    if file_urls:
         total_size = 0
         temp_dir = tempfile.mkdtemp()
         semaphore = asyncio.Semaphore(settings.attachment_concurrency)

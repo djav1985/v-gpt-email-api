@@ -87,8 +87,8 @@ def test_forward_email(monkeypatch):
 
     sent = {}
 
-    async def mock_send(to, subject, body, file_url, headers):
-        sent.update({"to": to, "subject": subject, "body": body, "headers": headers})
+    async def mock_send(to, subject, body, file_urls, headers):
+        sent.update({"to": to, "subject": subject, "body": body, "headers": headers, "files": file_urls})
 
     monkeypatch.setattr(imap_client, "fetch_message", mock_fetch)
     monkeypatch.setattr(imap_client, "extract_body", lambda msg: "body")
@@ -118,8 +118,8 @@ def test_reply_email(monkeypatch):
 
     sent = {}
 
-    async def mock_send(to, subject, body, file_url, headers):
-        sent.update({"to": to, "subject": subject, "body": body, "headers": headers})
+    async def mock_send(to, subject, body, file_urls, headers):
+        sent.update({"to": to, "subject": subject, "body": body, "headers": headers, "files": file_urls})
 
     monkeypatch.setattr(imap_client, "fetch_message", mock_fetch)
     monkeypatch.setattr(imap_client, "extract_body", lambda msg: "orig body")

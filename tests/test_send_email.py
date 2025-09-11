@@ -21,16 +21,26 @@ client = TestClient(app)
 
 
 def test_send_email(monkeypatch):
-    async def mock_send_email(to_addresses, subject, body, file_url, headers=None):
+    captured = {}
+
+    async def mock_send_email(to_addresses, subject, body, file_urls, headers=None):
+        captured["file_urls"] = file_urls
         return None
 
     monkeypatch.setattr("app.routes.send_email.send_email", mock_send_email)
+    urls = ["http://f1.txt/", "http://f2.txt/"]
     response = client.post(
         "/",
-        json={"to_addresses": ["a@b.com"], "subject": "Sub", "body": "Body", "file_url": None},
+        json={
+            "to_addresses": ["a@b.com"],
+            "subject": "Sub",
+            "body": "Body",
+            "file_url": urls,
+        },
     )
     assert response.status_code == 201
     assert response.json() == {"message": "Email sent successfully"}
+    assert captured["file_urls"] == urls
 
 def test_send_email_http_error(monkeypatch):
     async def mock_send(*a, **k):
