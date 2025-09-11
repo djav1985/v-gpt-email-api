@@ -15,7 +15,12 @@ os.environ["ACCOUNT_IMAP_PORT"] = "993"
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.models import EmailSummary, MessageResponse, SendEmailRequest  # noqa: E402
+from app.models import (
+    EmailSummary,
+    ErrorResponse,
+    MessageResponse,
+    SendEmailRequest,
+)  # noqa: E402
 
 
 def test_send_email_request_invalid_email():
@@ -66,3 +71,14 @@ def test_email_summary_invalid_uid():
 def test_message_response_empty_message():
     with pytest.raises(ValidationError):
         MessageResponse(message="")
+
+
+def test_error_response_optional_code():
+    err = ErrorResponse(detail="Missing API key")
+    assert err.detail == "Missing API key"
+    assert err.code is None
+
+
+def test_error_response_with_code():
+    err = ErrorResponse(detail="Forbidden", code="forbidden")
+    assert err.code == "forbidden"

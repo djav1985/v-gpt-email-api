@@ -10,21 +10,25 @@ class SendEmailRequest(BaseModel):
         ...,
         description="List of recipient email addresses.",
         min_items=1,
+        example=["friend@example.com"],
     )
     subject: str = Field(
         ...,
         description="The subject of the email.",
         max_length=255,
         min_length=1,
+        example="Hello",
     )
     body: str = Field(
         ...,
         description="The body content of the email.",
         min_length=1,
+        example="Hi there",
     )
     file_url: Optional[list[HttpUrl]] = Field(
         None,
         description="The URL or comma-separated URLs of the files to be downloaded and attached to the email.",
+        example=["https://example.com/file.txt"],
     )
 
     @field_validator("file_url", mode="before")
@@ -41,11 +45,35 @@ class SendEmailRequest(BaseModel):
 
 
 class EmailSummary(BaseModel):
-    uid: str = Field(..., min_length=1)
-    subject: str | None = None
-    from_: str | None = Field(None, alias="from")
-    date: datetime | None = None
-    seen: bool
+    uid: str = Field(
+        ...,
+        min_length=1,
+        description="Unique identifier of the email.",
+        example="1",
+    )
+    subject: str | None = Field(
+        None,
+        max_length=255,
+        description="Subject line of the email.",
+        example="Hello",
+    )
+    from_: str | None = Field(
+        None,
+        alias="from",
+        max_length=255,
+        description="Sender email address.",
+        example="sender@example.com",
+    )
+    date: datetime | None = Field(
+        None,
+        description="Date the email was sent.",
+        example="2024-01-01T12:00:00Z",
+    )
+    seen: bool = Field(
+        ...,
+        description="Whether the email has been read.",
+        example=False,
+    )
 
     class Config:
         allow_population_by_field_name = True
@@ -53,4 +81,23 @@ class EmailSummary(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    message: str = Field(..., min_length=1)
+    message: str = Field(
+        ...,
+        min_length=1,
+        description="Human-readable response message.",
+        example="Email sent",
+    )
+
+
+class ErrorResponse(BaseModel):
+    detail: str = Field(
+        ...,
+        min_length=1,
+        description="Error message detail.",
+        example="Invalid request",
+    )
+    code: str | None = Field(
+        None,
+        description="Optional error code.",
+        example="invalid_request",
+    )
