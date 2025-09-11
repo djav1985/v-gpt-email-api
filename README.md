@@ -153,15 +153,18 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
       ACCOUNT_REPLY_TO: replyto@example.com
     ```
 
-    The service validates the SMTP settings on startup. Ensure `ACCOUNT_EMAIL`,
-    `ACCOUNT_PASSWORD`, `ACCOUNT_SMTP_SERVER`, and `ACCOUNT_SMTP_PORT` are set
-    or the application will raise a runtime error at launch.
+   The service validates the SMTP settings on startup. Ensure `ACCOUNT_EMAIL`,
+   `ACCOUNT_PASSWORD`, `ACCOUNT_SMTP_SERVER`, and `ACCOUNT_SMTP_PORT` are set
+   or the application will raise a runtime error at launch.
 
    If `API_KEY` is set, include it in requests using the `X-API-Key` header:
 
    ```bash
    curl -H "X-API-Key: $API_KEY" https://api.example.com/email/...
    ```
+
+   Requests missing this header or providing an incorrect key receive an HTTP
+   `401 Unauthorized` response.
 
 3. **Run the Docker Compose**:  
    Use the following command to start the service:

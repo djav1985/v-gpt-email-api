@@ -81,3 +81,38 @@ async def test_send_email_missing_settings(monkeypatch, client):
         follow_redirects=True,
     )
     assert resp.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_send_email_missing_api_key(client):
+    del client.headers["X-API-Key"]
+    resp = await client.post(
+        "/",
+        json={
+            "to_addresses": ["a@b.com"],
+            "subject": "S",
+            "body": "B",
+            "file_urls": None,
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_send_email_invalid_api_key(monkeypatch, client):
+    dependencies.settings.api_key = "expected"
+    client.headers["X-API-Key"] = "wrong"
+    resp = await client.post(
+        "/",
+        json={
+            "to_addresses": ["a@b.com"],
+            "subject": "S",
+            "body": "B",
+            "file_urls": None,
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 401
+    dependencies.settings.api_key = None
+    client.headers["X-API-Key"] = "token"

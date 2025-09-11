@@ -1,29 +1,26 @@
-# dependencies.py
-import os
-import logging
-import aiosmtplib
-import aiofiles
-import aiohttp
-import tempfile
-import shutil
-import mimetypes
+"""Utilities for configuration, email sending, and authentication helpers."""
+
 import asyncio
-from pathlib import Path
-from urllib.parse import urlparse
-
-from fastapi import HTTPException, Depends
-from fastapi.security import APIKeyHeader
-
+import logging
+import mimetypes
+import os
+import shutil
+import tempfile
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-
+from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
+import aiofiles
+import aiohttp
+import aiosmtplib
+from fastapi import Depends, HTTPException
+from fastapi.security import APIKeyHeader
 from pydantic import EmailStr
 from pydantic_settings import BaseSettings
-
 
 api_key_scheme = APIKeyHeader(
     name="X-API-Key",
@@ -42,6 +39,7 @@ class Config(BaseSettings):
     account_smtp_port: int
     account_imap_server: str
     account_imap_port: int
+    api_key: str | None = None
     from_name: str = ""
     attachment_concurrency: int = 3
     start_tls: bool = True
@@ -67,6 +65,17 @@ MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
 
 
 async def fetch_file(session, url, temp_dir) -> str:
+    """Download a file to a temporary directory.
+
+    Args:
+        session: Active HTTP session used for the download.
+        url: URL of the file to retrieve.
+        temp_dir: Temporary directory to store the file in.
+
+    Returns:
+        Path to the downloaded file on disk.
+
+    """
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="Invalid URL scheme")
@@ -112,7 +121,20 @@ async def send_email(
     body: str,
     file_urls: Optional[list[str]] = None,
     headers: Optional[dict[str, str]] = None,
-) -> None:
+    ) -> None:
+    """Compose and send an email with optional attachments.
+
+    Args:
+        to_addresses: List of recipient email addresses.
+        subject: Email subject line.
+        body: HTML body of the message.
+        file_urls: Optional list of attachment URLs to fetch and include.
+        headers: Optional additional email headers.
+
+    Returns:
+        None. Raises ``HTTPException`` on failure.
+
+    """
     if settings is None:
         raise RuntimeError("Settings have not been initialized")
 
@@ -207,9 +229,21 @@ async def send_email(
 
 
 def get_api_key(api_key: str | None = Depends(api_key_scheme)) -> str:
-    expected_key = os.getenv("API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=403, detail="Invalid or missing API key")
-    if expected_key and api_key != expected_key:
-        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    """Validate the provided API key from the request header.
+
+    Args:
+        api_key: API key extracted from the ``X-API-Key`` header.
+
+    Returns:
+        The validated API key.
+
+    Raises:
+        HTTPException: If the key is missing or does not match the configured key.
+
+    """
+    expected_key = settings.api_key if settings else None
+    if api_key is None:
+        raise HTTPException(status_code=401, detail="Missing API key")
+    if expected_key is not None and api_key != expected_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
     return api_key
