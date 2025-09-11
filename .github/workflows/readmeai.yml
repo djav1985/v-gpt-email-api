@@ -1,0 +1,40 @@
+name: Generate README with GitHub Models
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  readme-ai:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit README updates
+      id-token: write   # required for GitHub Models auth
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install ReadmeAI
+        run: pip install readmeai
+
+      - name: Generate README with GitHub Models
+        env:
+          # Use the built-in GitHub Actions token for auth
+          OPENAI_API_KEY: ${{ github.token }}
+          OPENAI_API_BASE: "https://models.inference.ai.azure.com"
+        run: |
+          readmeai --repository . --api openai --model gpt-4o-mini
+
+      - name: Commit and push updated README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update README using GitHub Models" || echo "No changes"
+          git push
