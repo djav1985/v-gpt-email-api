@@ -13,3 +13,5 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Header decoding concatenates multi-part encodings.
 - Attachment downloads restricted to HTTP/HTTPS schemes.
 - Email summary dates stored as `datetime` and serialized in ISO format.
+### Changed
+- Updated documentation in `README.md` to reflect current structure, environment variables, and changelog link.

@@ -66,6 +66,7 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 
 ```sh
 └── v-gpt-email-api/
+    ├── .env.example
     ├── Dockerfile
     ├── LICENSE
     ├── README.md
@@ -74,7 +75,6 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
     │   ├── dependencies.py
     │   ├── main.py
     │   ├── models.py
-    │   ├── public
     │   ├── routes
     │   │   ├── __init__.py
     │   │   ├── read_email.py
@@ -82,42 +82,34 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
     │   └── services
     │       ├── __init__.py
     │       └── imap_client.py
+    ├── config
+    │   └── signature.txt
     ├── docker-compose.yml
-    ├── images
-    │   └── header.png
-    └── requirements.txt
+    ├── requirements.txt
+    └── tests
+        ├── test_dependencies.py
+        ├── test_imap_client.py
+        └── test_read_email.py
 ```
 
 ---
 
 ## 📦 Modules
 
-<details closed><summary>.</summary>
-
-| File                                     | Summary                                                                                                                                                                                                                                                                                                                                         |
-| ---                                      | ---                                                                                                                                                                                                                                                                                                                                             |
-| [requirements.txt](requirements.txt)     | Requirements.txt specifies the necessary dependencies for the application, including FastAPI for web framework, Uvicorn for ASGI server, Pydantic for data validation, aiosmtplib for SMTP client, aiohttp for asynchronous HTTP requests, aiofiles for file operations, and python-dotenv for environment variable management.                 |
-| [docker-compose.yml](docker-compose.yml) | Configure the applications deployment environment, defining service parameters, environmental variables, and network settings. Enables containerized operation of the v-gpt-email-api, ensuring seamless integration and communication with email servers and APIs for the intended functionalities within the broader repository architecture. |
-| [Dockerfile](Dockerfile)                 | Facilitates the deployment of the v-gpt-email-api repository by defining a multi-stage Docker build, installing dependencies, setting environment variables, and configuring the FastAPI application to run with Uvicorn. This ensures an optimized and isolated environment for running the API service efficiently.                           |
-
-</details>
-
-<details closed><summary>app</summary>
-
-| File                                   | Summary                                                                                                                                                                                                                                                                                                                               |
-| ---                                    | ---                                                                                                                                                                                                                                                                                                                                   |
-| [main.py](app/main.py)                 | Main.py initializes the FastAPI application instance for the Email Management API, setting the application’s metadata and configuration. It integrates the email sending feature by including the appropriate router, enabling the API to handle email-sending requests within the repository’s architecture.                         |
-| [dependencies.py](app/dependencies.py) | Facilitates email dispatching with file attachments, integrates API key validation, and fetches remote files. Utilizes environment variables for SMTP configuration, manages email signatures, and enforces file size and type constraints to ensure compliant and secure email transmission as part of the broader email API system. |
-| [models.py](app/models.py)             | Define the structure for email-related data within the API, ensuring standardized validation and descriptive metadata for each email attribute. This facilitates consistent data handling and error checking across email functionalities in the repositorys broader email service architecture.                                      |
-
-</details>
+| Path | Summary |
+| --- | --- |
+| [`app/`](app) | Core application code including API routes and IMAP services. |
+| [`config/`](config) | Configuration resources such as the customizable `signature.txt`. |
+| [`tests/`](tests) | Unit tests covering dependencies, IMAP client, and email routes. |
+| [`docker-compose.yml`](docker-compose.yml) | Container orchestration for local deployment. |
+| [`requirements.txt`](requirements.txt) | Python dependencies required by the service. |
 
 <details closed><summary>app.routes</summary>
 
-| File                                      | Summary                                                                                                                                                                                                                                                                                                    |
-| ---                                       | ---                                                                                                                                                                                                                                                                                                        |
-| [send_email.py](app/routes/send_email.py) | Defines an API endpoint for sending emails, integrating request validation and error handling. Utilizes dependency injection for API key management and email sending functionality. Enhances the parent repositorys capability by providing a robust mechanism for email dispatch within the application. |
-| [read_email.py](app/routes/read_email.py) | Exposes endpoints for listing folders, retrieving messages, moving, forwarding, replying, and deleting emails, as well as storing drafts via IMAP utilities. |
+| File | Summary |
+| --- | --- |
+| [send_email.py](app/routes/send_email.py) | API endpoint for sending emails with validation and error handling. |
+| [read_email.py](app/routes/read_email.py) | Endpoints for listing folders, retrieving messages, and handling IMAP actions. |
 
 </details>
 
@@ -125,11 +117,9 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 
 | File | Summary |
 | --- | --- |
-| [imap_client.py](app/services/imap_client.py) | Async helpers for interacting with the IMAP server to list mailboxes, fetch, move, delete, and append messages. |
+| [imap_client.py](app/services/imap_client.py) | Async helpers for interacting with the IMAP server to list, move, delete, and append messages. |
 
 </details>
-
----
 
 ## 🚀 Getting Started
 
@@ -173,12 +163,22 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
    docker-compose up
    ```
 
-4. **(Optional) Run in Detached Mode**:  
+4. **(Optional) Run in Detached Mode**:
    To run the containers in the background, use:
 
    ```bash
    docker-compose up -d
    ```
+
+### Environment Variables
+
+| Name | Default | Description |
+| --- | --- | --- |
+| `FROM_NAME` | *(empty)* | Display name used in outgoing emails. |
+| `ATTACHMENT_CONCURRENCY` | `3` | Number of attachments processed in parallel. |
+| `START_TLS` | `True` | Enables STARTTLS for SMTP connections. |
+
+The email signature appended to outbound messages can be customized in [`config/signature.txt`](config/signature.txt).
 
 ### 🤖 Usage
 
@@ -209,9 +209,7 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 
 ## 🛠 Project Changelog
 
--  `► `
--  `► `
--  `► `
+See [CHANGELOG.md](CHANGELOG.md) for a full history of updates, including recent documentation improvements.
 
 ---
 
