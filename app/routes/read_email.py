@@ -1,13 +1,10 @@
 # flake8: noqa
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
 from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from ..dependencies import get_api_key, send_email
 from ..models import EmailSummary, ErrorResponse, MessageResponse, SendEmailRequest
 from . import imap
-from .. import dependencies
+from .imap import move_email_action, delete_email_action, create_draft_action
 
 read_router = APIRouter(tags=["Read"])
 
@@ -83,7 +80,7 @@ read_router = APIRouter(tags=["Read"])
     },
 )
 async def get_emails(
-    limit: int = Query(10, description="Maximum number of emails to return"),
+    limit: int = Query(10, gt=0, description="Maximum number of emails to return"),
     unread: bool = Query(False, description="Only fetch unread emails"),
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> list[EmailSummary]:
@@ -226,11 +223,7 @@ async def move_email(
     folder: str = Query(..., description="Destination folder"),
     source_folder: str = Query("INBOX", description="Source folder"),
 ) -> MessageResponse:
-    try:
-        await imap.move_message(uid, folder, source_folder)
-        return MessageResponse(message="Email moved")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await move_email_action(uid, folder, source_folder)
 
 
 @read_router.post(
@@ -313,7 +306,10 @@ async def forward_email(
 ) -> MessageResponse:
     try:
         original = await imap.fetch_message(uid)
-        body = imap.extract_body(original)
+        original_body = imap.extract_body(original)
+        body = (
+            f"{request.body}\n\n{original_body}" if request.body else original_body
+        )
         subject = request.subject or imap.decode_header_value(original.get("Subject", ""))
         msg_id = original.get("Message-ID")
         headers = {}
@@ -496,11 +492,7 @@ async def delete_email(
     uid: str = Path(..., description="UID of the email to delete"),
     folder: str = Query("INBOX", description="Folder containing the email"),
 ) -> MessageResponse:
-    try:
-        await imap.delete_message(uid, folder)
-        return MessageResponse(message="Email deleted")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await delete_email_action(uid, folder)
 
 
 @read_router.post(
@@ -580,15 +572,4 @@ async def create_draft(
         },
     )
 ) -> MessageResponse:
-    if dependencies.settings is None:
-        raise HTTPException(status_code=500, detail="Settings have not been initialized")
-    msg = MIMEMultipart()
-    msg["From"] = dependencies.settings.account_email
-    msg["To"] = ", ".join(request.to_addresses)
-    msg["Subject"] = request.subject
-    msg.attach(MIMEText(request.body, "html"))
-    try:
-        await imap.append_message("Drafts", msg)
-        return MessageResponse(message="Draft stored")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await create_draft_action(request)

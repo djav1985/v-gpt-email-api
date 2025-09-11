@@ -30,13 +30,22 @@ def setup_settings():
     dependencies.settings = None
 
 
-class MockResponse:
-    def __init__(self, status: int, data: bytes = b"content"):
-        self.status = status
-        self._data = data
+class MockContent:
+    def __init__(self, chunks: list[bytes]):
+        self._chunks = chunks
 
-    async def read(self) -> bytes:
-        return self._data
+    async def iter_chunked(self, size: int):
+        for chunk in self._chunks:
+            yield chunk
+
+
+class MockResponse:
+    def __init__(self, status: int, chunks: list[bytes] | None = None):
+        self.status = status
+        self.content = MockContent(chunks or [b"content"])
+
+    async def read(self):  # pragma: no cover - should not be called
+        raise AssertionError("read should not be called")
 
     async def __aenter__(self):
         return self
@@ -54,7 +63,7 @@ class MockSession:
 
 
 def test_fetch_file_success(tmp_path):
-    session = MockSession(MockResponse(200, b"data"))
+    session = MockSession(MockResponse(200, [b"data"]))
     file_path = asyncio.run(
         dependencies.fetch_file(session, "http://example.com/file.txt", tmp_path)
     )
@@ -76,6 +85,15 @@ def test_fetch_file_disallowed_extension(tmp_path):
         asyncio.run(
             dependencies.fetch_file(session, "http://example.com/file.exe", tmp_path)
         )
+
+
+def test_fetch_file_streams_chunks(tmp_path):
+    chunks = [b"a" * 1024, b"b" * 1024, b"c" * 1024]
+    session = MockSession(MockResponse(200, chunks))
+    file_path = asyncio.run(
+        dependencies.fetch_file(session, "http://example.com/file.txt", tmp_path)
+    )
+    assert Path(file_path).stat().st_size == 3 * 1024
 
 
 async def fake_fetch_file(session, url, temp_dir):

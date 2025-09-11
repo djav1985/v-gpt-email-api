@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from fastapi.testclient import TestClient
+import pytest
 
 os.environ["ACCOUNT_EMAIL"] = "user@example.com"
 os.environ["ACCOUNT_PASSWORD"] = "password"
@@ -40,3 +41,10 @@ def test_startup_without_signature(tmp_path):
     assert dependencies.signature_text == ""
     if temp.exists():
         temp.rename(sig_file)
+
+
+def test_startup_missing_env(monkeypatch):
+    monkeypatch.delenv("ACCOUNT_EMAIL", raising=False)
+    with pytest.raises(RuntimeError):
+        with TestClient(app):
+            pass
