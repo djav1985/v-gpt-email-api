@@ -1,57 +1,61 @@
+
 # Copilot Instructions for v-gpt-email-api
 
 ## Project Overview
-- This is a FastAPI-based microservice for intelligent email automation, using GPT-powered features for drafting, sorting, and automating email tasks.
-- The service is containerized with Docker and orchestrated via `docker-compose.yml`.
+- FastAPI microservice for GPT-powered email automation: drafting, sorting, and automating email tasks.
+- Containerized via Docker; orchestrated with `docker-compose.yml`.
 - Key dependencies: FastAPI, Uvicorn, Pydantic, aiosmtplib, aiohttp, python-dotenv, aiofiles.
 
 ## Architecture & Key Files
-- Main entrypoint: `app/main.py` (initializes FastAPI, includes routers)
-- Email logic & validation: `app/dependencies.py`, `app/models.py`
-- API endpoints: `app/routes/send_email.py` (uses dependency injection for API key and email sending)
-- Configuration: Environment variables set in `docker-compose.yml` (SMTP/IMAP credentials, API key, concurrency)
-- All sensitive config is loaded via environment variables, not hardcoded.
+- Main entrypoint: `app/main.py` (initializes FastAPI, includes routers from `app/routes/`).
+- API endpoints: `app/routes/send_email.py` (send), `app/routes/read_email.py` (read); add new endpoints in `app/routes/` and register in `main.py`.
+- Email logic: `app/dependencies.py` (dependency injection, validation), `app/models.py` (Pydantic models for email data).
+- IMAP/SMTP integration: `app/services/imap_client.py` (IMAP logic), aiosmtplib for SMTP.
+- Configuration: All sensitive config (SMTP/IMAP credentials, API key, concurrency) loaded from environment variables via `docker-compose.yml`.
 
 ## Developer Workflows
 - **Build & Run:**
-  - Use `docker-compose up` to build and run the service (see README for details).
-  - For background mode: `docker-compose up -d`
-- **Environment Setup:**
-  - Python 3.10 required.
-  - SMTP/IMAP settings must be valid or the app will fail at startup.
-- **API Documentation:**
-  - OpenAPI spec available at `/openapi.json` (useful for AI agents and integration).
+  - Use `docker-compose up` to build and run the service. For detached mode: `docker-compose up -d`.
+  - Do not run with `uvicorn` directly unless debugging locally.
+- **Testing:**
+  - Run unit tests in `tests/` (e.g., `pytest tests/`).
+  - Test coverage includes edge cases (see `AGENTS.md`).
+- **Linting:**
+  - Use project linters/formatters before committing (see `AGENTS.md`).
+- **API Docs:**
+  - OpenAPI spec at `/openapi.json` when service is running.
 
 ## Patterns & Conventions
 - **Modularity:**
-  - All business logic is separated into dependencies, models, and routes for maintainability.
-  - Dependency injection is used for API key validation and email sending.
+  - Business logic separated into dependencies, models, routes, and services for maintainability.
+  - Dependency injection for API key validation and email sending (see `app/dependencies.py`).
 - **Validation & Security:**
-  - Pydantic models enforce strict validation for all email data.
-  - API key required for access; validated via dependency injection.
+  - Pydantic models strictly validate all email data (`app/models.py`).
+  - API key required for all endpoints; validated via dependency injection.
   - File size/type constraints enforced for attachments.
-- **Error Handling:**
-  - Errors are handled with FastAPI's exception system and custom validation logic.
 - **Async Operations:**
   - All I/O (email, HTTP, file) is asynchronous for performance.
+- **Error Handling:**
+  - Use FastAPI's exception system and custom validation logic.
 
 ## Integration Points
 - **External Email Services:**
-  - Uses aiosmtplib for SMTP and aiohttp for remote file fetching.
+  - SMTP via aiosmtplib; IMAP via custom logic in `app/services/imap_client.py`.
 - **Environment Variables:**
-  - All credentials and config are loaded from environment (see `docker-compose.yml`).
+  - All credentials/config loaded from environment (see `docker-compose.yml`).
 - **Docker:**
-  - Service is always run in a container; do not run directly with `uvicorn` unless debugging locally.
+  - Service is always run in a container; direct `uvicorn` usage only for local debugging.
 
 ## Examples
-- To add a new API endpoint, create a new file in `app/routes/`, define a router, and include it in `main.py`.
-- To change email validation, update the Pydantic models in `app/models.py`.
-- To update SMTP/IMAP settings, edit environment variables in `docker-compose.yml`.
+- Add new API endpoint: create a router in `app/routes/`, register in `main.py`.
+- Change email validation: update Pydantic models in `app/models.py`.
+- Update SMTP/IMAP settings: edit environment variables in `docker-compose.yml`.
 
 ## References
-- See `README.md` for full setup and module documentation.
-- Key files: `app/main.py`, `app/dependencies.py`, `app/models.py`, `app/routes/send_email.py`, `docker-compose.yml`, `Dockerfile`, `requirements.txt`.
+- See `README.md` for setup and module documentation.
+- See `AGENTS.md` for contributor/test/linting expectations.
+- Key files: `app/main.py`, `app/dependencies.py`, `app/models.py`, `app/routes/send_email.py`, `app/services/imap_client.py`, `docker-compose.yml`, `Dockerfile`, `requirements.txt`.
 
 ---
 
-If any section is unclear or missing, please provide feedback for further refinement.
+If any section is unclear or incomplete, please provide feedback for further refinement.
