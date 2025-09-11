@@ -2,6 +2,7 @@
 import os
 import sys
 from pathlib import Path
+import logging
 from fastapi.testclient import TestClient
 import pytest
 
@@ -41,6 +42,21 @@ def test_startup_without_signature(tmp_path):
     assert dependencies.signature_text == ""
     if temp.exists():
         temp.rename(sig_file)
+
+
+def test_startup_does_not_configure_logging(monkeypatch):
+    original_level = logging.getLogger().level
+    called = False
+
+    def fake_basicConfig(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(logging, "basicConfig", fake_basicConfig)
+    with TestClient(app):
+        pass
+    assert not called
+    assert logging.getLogger().level == original_level
 
 
 def test_startup_missing_env(monkeypatch):
