@@ -4,9 +4,10 @@ from email.mime.multipart import MIMEMultipart
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 
-from ..dependencies import get_api_key, send_email, settings
+from ..dependencies import get_api_key, send_email
 from ..models import SendEmailRequest, EmailSummary, MessageResponse
 from ..services import imap_client
+from .. import dependencies
 
 read_router = APIRouter(tags=["Read"])
 
@@ -17,6 +18,7 @@ read_router = APIRouter(tags=["Read"])
     dependencies=[Depends(get_api_key)],
     summary="Fetch emails",
     description="Return emails from the specified folder.",
+    operation_id="fetch_emails",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Emails not found"},
@@ -39,6 +41,7 @@ async def get_emails(
     dependencies=[Depends(get_api_key)],
     summary="List mail folders",
     description="List available mail folders.",
+    operation_id="list_folders",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Folders not found"},
@@ -58,6 +61,7 @@ async def get_folders() -> list[str]:
     summary="Move an email",
     description="Move an email to another folder.",
     response_model=MessageResponse,
+    operation_id="move_email",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Email not found"},
@@ -82,6 +86,7 @@ async def move_email(
     summary="Forward an email",
     description="Forward an existing email to new recipients.",
     response_model=MessageResponse,
+    operation_id="forward_email",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Email not found"},
@@ -115,6 +120,7 @@ async def forward_email(
     summary="Reply to an email",
     description="Reply to an existing email.",
     response_model=MessageResponse,
+    operation_id="reply_email",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Email not found"},
@@ -149,6 +155,7 @@ async def reply_email(
     summary="Delete an email",
     description="Delete an email from a folder.",
     response_model=MessageResponse,
+    operation_id="delete_email",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Email not found"},
@@ -172,6 +179,7 @@ async def delete_email(
     summary="Create a draft email",
     description="Store an email draft in the Drafts folder.",
     response_model=MessageResponse,
+    operation_id="create_draft",
     responses={
         400: {"description": "Invalid request"},
         404: {"description": "Folder not found"},
@@ -179,10 +187,10 @@ async def delete_email(
     },
 )
 async def create_draft(request: SendEmailRequest) -> MessageResponse:
-    if settings is None:
+    if dependencies.settings is None:
         raise HTTPException(status_code=500, detail="Settings have not been initialized")
     msg = MIMEMultipart()
-    msg["From"] = settings.account_email
+    msg["From"] = dependencies.settings.account_email
     msg["To"] = ", ".join(request.to_addresses)
     msg["Subject"] = request.subject
     msg.attach(MIMEText(request.body, "html"))
