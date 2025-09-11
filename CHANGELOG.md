@@ -19,6 +19,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Tests for API key validation and email sending error handling.
 - Extensive tests for dependencies, IMAP client, routes, models, and startup logic.
 - `account_reply_to` configuration option for customizing the Reply-To header.
+- Validation for required fields in email models, including recipient lists, subjects, bodies, messages, UIDs, and attachment URLs.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
