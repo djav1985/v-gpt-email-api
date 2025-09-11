@@ -16,3 +16,4 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Contact, license, and terms metadata added to the FastAPI application along with Send/Read tags.
 - Consistent `MessageResponse` model used across message endpoints and documented error responses.
 - Named API key bearer security scheme exposed in the OpenAPI schema.
+- Tests for API key validation and email sending error handling.
