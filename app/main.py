@@ -1,7 +1,9 @@
 # main,py
 import os
 import aiofiles
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
 
 from . import dependencies
 from .routes.send_email import send_router
@@ -17,6 +19,25 @@ tags_metadata = [
 
 
 # FastAPI application instance setup
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    dependencies.settings = dependencies.Config(
+        account_email=os.getenv("ACCOUNT_EMAIL") or "",
+        account_password=os.getenv("ACCOUNT_PASSWORD") or "",
+        account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER") or "",
+        account_smtp_port=int(os.getenv("ACCOUNT_SMTP_PORT", "587")),
+        account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER") or "",
+        account_imap_port=int(os.getenv("ACCOUNT_IMAP_PORT", "993")),
+    )
+    try:
+        async with aiofiles.open("config/signature.txt", "r") as file:
+            dependencies.signature_text = await file.read()
+    except FileNotFoundError:
+        dependencies.signature_text = ""
+    yield
+
 app = FastAPI(
     title="Email Management API",
     version="0.1.0",
@@ -30,18 +51,10 @@ app = FastAPI(
             "url": f"{os.getenv('BASE_URL', '')}{os.getenv('ROOT_PATH', '/')}",
             "description": "Base API server",
         }
-    ]
+    ],
+    lifespan=lifespan
 )
 
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    dependencies.settings = dependencies.Config()
-    try:
-        async with aiofiles.open("config/signature.txt", "r") as file:
-            dependencies.signature_text = await file.read()
-    except FileNotFoundError:
-        dependencies.signature_text = ""
 
 
 # Include routers for feature modules
