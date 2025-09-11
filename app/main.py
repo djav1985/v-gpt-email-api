@@ -1,7 +1,7 @@
-# flake8: noqa
 import os
 import logging
 import aiofiles
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
@@ -17,11 +17,6 @@ tags_metadata = [
     {"name": "Read", "description": "Endpoints for reading emails"},
     {"name": "IMAP", "description": "Low-level IMAP operations"},
 ]
-
-
-# FastAPI application instance setup
-from contextlib import asynccontextmanager
-
 logger = logging.getLogger(__name__)
 
 
@@ -57,13 +52,14 @@ async def lifespan(app):
         dependencies.signature_text = ""
     yield
 
+
 app = FastAPI(
     title="Email Management API",
     version="0.1.0",
     description="A FastAPI to send emails",
     openapi_version="3.1.0",
     openapi_tags=tags_metadata,
-    root_path=os.getenv('ROOT_PATH', '/'),
+    root_path=os.getenv("ROOT_PATH", "/"),
     root_path_in_servers=False,
     servers=[
         {
@@ -71,15 +67,15 @@ app = FastAPI(
             "description": "Base API server",
         }
     ],
-    lifespan=lifespan
+    lifespan=lifespan,
 )
-
 
 
 # Include routers for feature modules
 app.include_router(send_router)
 app.include_router(read_router)
 app.include_router(imap_router)
+
 
 def custom_openapi() -> dict:
     if app.openapi_schema:
@@ -109,7 +105,7 @@ app.openapi = custom_openapi
 
 
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+def http_exception_handler(request: Request, exc: HTTPException):
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

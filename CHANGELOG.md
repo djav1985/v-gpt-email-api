@@ -31,12 +31,16 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Explicit operation IDs defined for read email endpoints.
 - `send_email` accepts a list of attachment URLs via `file_urls` instead of a comma-separated string.
 - API routes now use `Security(get_api_key)` for API-key protection and include descriptive OpenAPI tags.
-- Send email endpoint now returns HTTP 200 on success.
+- Send email endpoint now returns HTTP 201 on success.
 - Forwarding emails respect the provided request body.
 - `limit` query parameters on email listing routes must be positive.
 - Console prints replaced with structured logging and logging configured at startup.
 - Startup now validates required environment variables before initializing settings.
 - Shared IMAP operations consolidated into reusable helpers.
+- API key retrieval and HTTP exception handling are now synchronous.
+- Forward and reply endpoints accept an optional folder parameter.
+- Tests use `pytest.mark.asyncio` instead of `asyncio.run`.
+- Removed blanket `flake8` ignores in favor of targeted suppressions.
 
 ### Removed
 - Deprecated `app/services/imap_client.py` in favor of a dedicated IMAP router.

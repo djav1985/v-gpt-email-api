@@ -13,14 +13,12 @@ logger = logging.getLogger(__name__)
     dependencies=[Security(get_api_key)],
     summary="Send an email",
     description="Send an email to one or more recipients.",
-    status_code=200,
+    status_code=201,
     response_model=MessageResponse,
     responses={
-        200: {
+        201: {
             "content": {
-                "application/json": {
-                    "example": {"message": "Email sent successfully"}
-                }
+                "application/json": {"example": {"message": "Email sent successfully"}}
             }
         },
         400: {
@@ -90,14 +88,10 @@ async def send_email_endpoint(
 ) -> MessageResponse:
     subject = request.subject
     body = request.body
-    file_urls = (
-        [str(url) for url in request.file_url] if request.file_url else None
-    )
+    file_urls = [str(url) for url in request.file_url] if request.file_url else None
 
     try:
-        await send_email(
-            request.to_addresses, subject, body, file_urls=file_urls
-        )
+        await send_email(request.to_addresses, subject, body, file_urls=file_urls)
         return MessageResponse(message="Email sent successfully")
     except HTTPException as e:
         logger.error("HTTPException: %s", e.detail)

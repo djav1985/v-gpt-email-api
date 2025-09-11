@@ -1,4 +1,3 @@
-# flake8: noqa
 from datetime import datetime
 import os
 import sys
@@ -15,12 +14,12 @@ os.environ["ACCOUNT_IMAP_PORT"] = "993"
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.models import (
+from app.models import (  # noqa: E402
     EmailSummary,
     ErrorResponse,
     MessageResponse,
     SendEmailRequest,
-)  # noqa: E402
+)
 
 
 def test_send_email_request_invalid_email():
@@ -54,7 +53,9 @@ def test_send_email_request_invalid_attachment_urls():
 
 def test_email_summary_alias_and_datetime():
     dt = datetime(2024, 1, 1, 12, 0, 0)
-    summary = EmailSummary(uid="1", subject="S", **{"from": "a@b.com"}, date=dt, seen=True)
+    summary = EmailSummary(
+        uid="1", subject="S", **{"from": "a@b.com"}, date=dt, seen=True
+    )
     data = summary.model_dump(by_alias=True)
     assert data["from"] == "a@b.com"
     json_data = summary.model_dump_json(by_alias=True)

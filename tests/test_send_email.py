@@ -1,4 +1,3 @@
-# flake8: noqa
 import os
 import sys
 from fastapi.testclient import TestClient
@@ -14,7 +13,7 @@ os.environ["ACCOUNT_IMAP_PORT"] = "993"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.main import app  # noqa: E402
-from app import dependencies
+from app import dependencies  # noqa: E402
 
 dependencies.settings = dependencies.Config()
 client = TestClient(app)
@@ -38,17 +37,24 @@ def test_send_email(monkeypatch):
             "file_url": urls,
         },
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == {"message": "Email sent successfully"}
     assert captured["file_urls"] == urls
+
 
 def test_send_email_http_error(monkeypatch):
     async def mock_send(*a, **k):
         raise HTTPException(status_code=400, detail="bad")
+
     monkeypatch.setattr("app.routes.send_email.send_email", mock_send)
     resp = client.post(
         "/",
-        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+        json={
+            "to_addresses": ["a@b.com"],
+            "subject": "S",
+            "body": "B",
+            "file_url": None,
+        },
     )
     assert resp.status_code == 400
 
@@ -56,10 +62,16 @@ def test_send_email_http_error(monkeypatch):
 def test_send_email_generic_error(monkeypatch):
     async def mock_send(*a, **k):
         raise RuntimeError("boom")
+
     monkeypatch.setattr("app.routes.send_email.send_email", mock_send)
     resp = client.post(
         "/",
-        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+        json={
+            "to_addresses": ["a@b.com"],
+            "subject": "S",
+            "body": "B",
+            "file_url": None,
+        },
     )
     assert resp.status_code == 500
 
@@ -68,6 +80,11 @@ def test_send_email_missing_settings(monkeypatch):
     monkeypatch.setattr(dependencies, "settings", None)
     resp = client.post(
         "/",
-        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+        json={
+            "to_addresses": ["a@b.com"],
+            "subject": "S",
+            "body": "B",
+            "file_url": None,
+        },
     )
     assert resp.status_code == 500

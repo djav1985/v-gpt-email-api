@@ -1,22 +1,37 @@
-# flake8: noqa
 # models.py
 from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
+
 class SendEmailRequest(BaseModel):
     to_addresses: list[EmailStr] = Field(
-        ..., description="List of recipient email addresses.", min_length=1, json_schema_extra={"example": ["friend@example.com"], "minItems": 1}
+        ...,
+        description="List of recipient email addresses.",
+        min_length=1,
+        json_schema_extra={"example": ["friend@example.com"], "minItems": 1},
     )
     subject: str = Field(
-        ..., description="The subject of the email.", max_length=255, min_length=1, json_schema_extra={"example": "Hello"}
+        ...,
+        description="The subject of the email.",
+        max_length=255,
+        min_length=1,
+        json_schema_extra={"example": "Hello"},
     )
     body: str = Field(
-        ..., description="The body content of the email.", min_length=1, json_schema_extra={"example": "Hi there"}
+        ...,
+        description="The body content of the email.",
+        min_length=1,
+        json_schema_extra={"example": "Hi there"},
     )
     file_url: Optional[list[HttpUrl]] = Field(
-        default=None, description="The URL or comma-separated URLs of the files to be downloaded and attached to the email.", json_schema_extra={"example": ["https://example.com/file.txt"]}
+        default=None,
+        description=(
+            "The URL or comma-separated URLs of the files to be downloaded and "
+            "attached to the email."
+        ),
+        json_schema_extra={"example": ["https://example.com/file.txt"]},
     )
 
     @field_validator("file_url", mode="before")
@@ -34,19 +49,33 @@ class SendEmailRequest(BaseModel):
 
 class EmailSummary(BaseModel):
     uid: str = Field(
-        ..., min_length=1, description="Unique identifier of the email.", json_schema_extra={"example": "1"}
+        ...,
+        min_length=1,
+        description="Unique identifier of the email.",
+        json_schema_extra={"example": "1"},
     )
     subject: str | None = Field(
-        default=None, max_length=255, description="Subject line of the email.", json_schema_extra={"example": "Hello"}
+        default=None,
+        max_length=255,
+        description="Subject line of the email.",
+        json_schema_extra={"example": "Hello"},
     )
     from_: str | None = Field(
-        default=None, alias="from", max_length=255, description="Sender email address.", json_schema_extra={"example": "sender@example.com"}
+        default=None,
+        alias="from",
+        max_length=255,
+        description="Sender email address.",
+        json_schema_extra={"example": "sender@example.com"},
     )
     date: datetime | None = Field(
-        default=None, description="Date the email was sent.", json_schema_extra={"example": "2024-01-01T12:00:00Z"}
+        default=None,
+        description="Date the email was sent.",
+        json_schema_extra={"example": "2024-01-01T12:00:00Z"},
     )
     seen: bool = Field(
-        ..., description="Whether the email has been read.", json_schema_extra={"example": False}
+        ...,
+        description="Whether the email has been read.",
+        json_schema_extra={"example": False},
     )
 
     class Config:
@@ -56,14 +85,22 @@ class EmailSummary(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str = Field(
-        ..., min_length=1, description="Human-readable response message.", json_schema_extra={"example": "Email sent"}
+        ...,
+        min_length=1,
+        description="Human-readable response message.",
+        json_schema_extra={"example": "Email sent"},
     )
 
 
 class ErrorResponse(BaseModel):
     detail: str = Field(
-        ..., min_length=1, description="Error message detail.", json_schema_extra={"example": "Invalid request"}
+        ...,
+        min_length=1,
+        description="Error message detail.",
+        json_schema_extra={"example": "Invalid request"},
     )
     code: str | None = Field(
-        default=None, description="Optional error code.", json_schema_extra={"example": "invalid_request"}
+        default=None,
+        description="Optional error code.",
+        json_schema_extra={"example": "invalid_request"},
     )
