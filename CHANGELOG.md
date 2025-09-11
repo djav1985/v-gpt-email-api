@@ -13,3 +13,6 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Header decoding concatenates multi-part encodings.
 - Attachment downloads restricted to HTTP/HTTPS schemes.
 - Email summary dates stored as `datetime` and serialized in ISO format.
+### Changed
+- Dockerfile uses BuildKit cache for pip installations and exec-form `CMD`.
+- `.dockerignore` expanded to exclude tests, caches, and other non-runtime files.

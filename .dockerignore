@@ -5,3 +5,16 @@
 .github
 .gitea
 .venv
+tests/
+.env
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.cache
+*.log
+docker-compose.yml
+.gitattributes
+.gitignore
+*.md
+*.png
+config/
