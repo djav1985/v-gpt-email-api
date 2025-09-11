@@ -1,5 +1,6 @@
 import asyncio
 import email
+from email import header, message, utils
 import imaplib
 import re
 import time
@@ -21,7 +22,7 @@ from ..models import (
 
 
 def _decode_header(value: str) -> str:
-    parts = email.header.decode_header(value)
+    parts = header.decode_header(value)
     decoded = []
     for part, enc in parts:
         if isinstance(part, bytes):
@@ -35,22 +36,25 @@ def decode_header_value(value: str) -> str:
     return _decode_header(value)
 
 
-def _extract_body(msg: email.message.Message) -> str:
+def _extract_body(msg: message.Message) -> str:
     if msg.is_multipart():
         for part in msg.walk():
             if part.get_content_type() == "text/plain" and not part.get_filename():
                 payload = part.get_payload(decode=True)
-                return payload.decode(
-                    part.get_content_charset() or "utf-8", errors="ignore"
-                )
+                if isinstance(payload, bytes):
+                    return payload.decode(part.get_content_charset() or "utf-8", errors="ignore")
+                elif isinstance(payload, str):
+                    return payload
     else:
         payload = msg.get_payload(decode=True)
-        if payload:
+        if isinstance(payload, bytes):
             return payload.decode(msg.get_content_charset() or "utf-8", errors="ignore")
+        elif isinstance(payload, str):
+            return payload
     return ""
 
 
-def extract_body(msg: email.message.Message) -> str:
+def extract_body(msg: message.Message) -> str:
     return _extract_body(msg)
 
 
@@ -73,7 +77,10 @@ async def list_mailboxes() -> list[str]:
                 return []
             mailboxes: list[str] = []
             for mbox in data:
-                line = mbox.decode()
+                if isinstance(mbox, bytes):
+                    line = mbox.decode()
+                else:
+                    line = str(mbox)
                 match = re.search(r'"((?:\\"|[^"])*)"$', line)
                 if match:
                     name = match.group(1).replace('\\"', '"')
@@ -119,19 +126,18 @@ async def fetch_messages(
                 msg = email.message_from_bytes(header_bytes)
                 subject = _decode_header(msg.get("Subject", ""))
                 from_raw = _decode_header(msg.get("From", ""))
-                from_ = email.utils.parseaddr(from_raw)[1]
+                from_ = utils.parseaddr(from_raw)[1]
                 date_raw = msg.get("Date", "")
                 date = parsedate_to_datetime(date_raw) if date_raw else None
                 seen = "\\Seen" in flag_info
-                summaries.append(
-                    EmailSummary(
-                        uid=uid.decode(),
-                        subject=subject or "",
-                        from_=from_,
-                        date=date,
-                        seen=seen,
-                    )
+                summary_data = dict(
+                    uid=uid.decode(),
+                    subject=subject or "",
+                    date=date,
+                    seen=seen,
                 )
+                summary_data["from"] = from_
+                summaries.append(EmailSummary(**summary_data))
             return summaries
 
     return await asyncio.to_thread(inner)
@@ -201,10 +207,10 @@ async def append_message(folder: str, msg: MIMEMultipart) -> None:
     await asyncio.to_thread(inner)
 
 
-async def fetch_message(uid: str, folder: str = "INBOX") -> email.message.Message:
+async def fetch_message(uid: str, folder: str = "INBOX") -> message.Message:
     """Fetch a full message by UID."""
 
-    def inner() -> email.message.Message:
+    def inner() -> message.Message:
         if dependencies.settings is None:
             raise RuntimeError("Settings have not been initialized")
         with imaplib.IMAP4_SSL(
@@ -219,7 +225,9 @@ async def fetch_message(uid: str, folder: str = "INBOX") -> email.message.Messag
             typ, msg_data = imap.uid("fetch", uid, "(RFC822)")
             if typ != "OK" or msg_data is None or not msg_data[0]:
                 raise RuntimeError("Failed to fetch message")
+            # msg_data[0][1] should be bytes
             return email.message_from_bytes(msg_data[0][1])
+## Removed custom message_from_bytes helper, use email.message_from_bytes directly
 
     return await asyncio.to_thread(inner)
 

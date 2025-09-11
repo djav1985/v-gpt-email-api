@@ -1,9 +1,9 @@
 import os
-import logging
+from typing import AsyncGenerator
 import aiofiles
 from contextlib import asynccontextmanager
 from pydantic import ValidationError
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 
@@ -12,17 +12,15 @@ from .routes.send_email import send_router
 from .routes.read_email import read_router
 from .routes.imap import imap_router
 
-
 tags_metadata = [
     {"name": "Send", "description": "Endpoints for sending emails"},
     {"name": "Read", "description": "Endpoints for reading emails"},
     {"name": "IMAP", "description": "Low-level IMAP operations"},
 ]
-logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(app) -> AsyncGenerator[None, None]:
     try:
         dependencies.settings = dependencies.Config()
     except ValidationError as exc:
@@ -31,12 +29,10 @@ async def lifespan(app):
             for err in exc.errors()
             if err.get("type") == "missing"
         ]
-        logger.error(
-            "Missing required environment variables: %s", ", ".join(missing)
-        )
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing)}"
         ) from exc
+
     try:
         async with aiofiles.open("config/signature.txt", "r") as file:
             dependencies.signature_text = await file.read()
@@ -63,7 +59,7 @@ app = FastAPI(
 )
 
 
-# Include routers for feature modules
+# Routers
 app.include_router(send_router)
 app.include_router(read_router)
 app.include_router(imap_router)
@@ -97,7 +93,7 @@ app.openapi = custom_openapi
 
 
 @app.exception_handler(HTTPException)
-def http_exception_handler(request: Request, exc: HTTPException):
+def http_exception_handler(exc: HTTPException) -> JSONResponse:
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

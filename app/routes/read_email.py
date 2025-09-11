@@ -311,8 +311,8 @@ async def forward_email(
     uid: str = Path(..., description="UID of the email to forward"),
     request: SendEmailRequest = Body(
         ...,
-        examples={
-            "basic": {
+        examples=[
+            {
                 "summary": "Forward email",
                 "value": {
                     "to_addresses": ["recipient@example.com"],
@@ -320,7 +320,7 @@ async def forward_email(
                     "body": "See attached",
                 },
             }
-        },
+        ],
     ),
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> MessageResponse:
@@ -410,8 +410,8 @@ async def reply_email(
     uid: str = Path(..., description="UID of the email to reply to"),
     request: SendEmailRequest = Body(
         ...,
-        examples={
-            "basic": {
+        examples=[
+            {
                 "summary": "Reply to email",
                 "value": {
                     "to_addresses": ["recipient@example.com"],
@@ -419,7 +419,7 @@ async def reply_email(
                     "body": "Thanks!",
                 },
             }
-        },
+        ],
     ),
     folder: str = Query("INBOX", description="Mail folder to read from"),
 ) -> MessageResponse:
@@ -576,8 +576,8 @@ async def delete_email(
 async def create_draft(
     request: SendEmailRequest = Body(
         ...,
-        examples={
-            "basic": {
+        examples=[
+            {
                 "summary": "Draft email",
                 "value": {
                     "to_addresses": ["recipient@example.com"],
@@ -585,7 +585,7 @@ async def create_draft(
                     "body": "Draft body",
                 },
             }
-        },
+        ],
     )
 ) -> MessageResponse:
     return await create_draft_action(request)
