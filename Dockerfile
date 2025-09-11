@@ -11,7 +11,9 @@ COPY requirements.txt /app
 # Install Python dependencies in a virtual environment
 RUN python -m venv /app/venv && \
     . /app/venv/bin/activate && \
-    pip install --find-links /app/cache -r requirements.txt
+    pip install --no-cache-dir --find-links /app/cache -r requirements.txt || \
+    pip install --no-cache-dir -r requirements.txt
+
 
 # Final stage
 FROM python:3.10-slim
