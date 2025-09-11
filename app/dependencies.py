@@ -25,8 +25,20 @@ from pydantic_settings import BaseSettings
 class Config(BaseSettings):
     """Application configuration loaded from environment variables."""
 
-    if ACCOUNT_SMTP_PORT is not None:
-        ACCOUNT_SMTP_PORT = int(ACCOUNT_SMTP_PORT)
+    account_email: EmailStr = Field(env="ACCOUNT_EMAIL")
+    account_password: str = Field(env="ACCOUNT_PASSWORD")
+    account_smtp_server: str = Field(env="ACCOUNT_SMTP_SERVER")
+    account_smtp_port: int = Field(env="ACCOUNT_SMTP_PORT")
+    account_imap_server: str = Field(env="ACCOUNT_IMAP_SERVER")
+    account_imap_port: int = Field(env="ACCOUNT_IMAP_PORT")
+    from_name: str = Field(default="", env="FROM_NAME")
+    attachment_concurrency: int = Field(default=3, env="ATTACHMENT_CONCURRENCY")
+    start_tls: bool = Field(default=True, env="START_TLS")
+
+
+settings: Config | None = None
+signature_text: str = ""
+ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
 
 ALLOWED_FILE_TYPES = {
     ".zip",

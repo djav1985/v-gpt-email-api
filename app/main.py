@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from . import dependencies
 from .routes.send_email import send_router
+from .routes.read_email import read_router
 
 
 # FastAPI application instance setup
@@ -30,3 +31,4 @@ async def startup_event() -> None:
 
 # Include routers for feature modules
 app.include_router(send_router)
+app.include_router(read_router)

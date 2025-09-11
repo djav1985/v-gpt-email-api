@@ -75,7 +75,13 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
     │   ├── main.py
     │   ├── models.py
     │   ├── public
-    │   └── routes
+    │   ├── routes
+    │   │   ├── __init__.py
+    │   │   ├── read_email.py
+    │   │   └── send_email.py
+    │   └── services
+    │       ├── __init__.py
+    │       └── imap_client.py
     ├── docker-compose.yml
     ├── images
     │   └── header.png
@@ -111,6 +117,15 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 | File                                      | Summary                                                                                                                                                                                                                                                                                                    |
 | ---                                       | ---                                                                                                                                                                                                                                                                                                        |
 | [send_email.py](app/routes/send_email.py) | Defines an API endpoint for sending emails, integrating request validation and error handling. Utilizes dependency injection for API key management and email sending functionality. Enhances the parent repositorys capability by providing a robust mechanism for email dispatch within the application. |
+| [read_email.py](app/routes/read_email.py) | Exposes endpoints for listing folders, retrieving messages, moving, forwarding, replying, and deleting emails, as well as storing drafts via IMAP utilities. |
+
+</details>
+
+<details closed><summary>app.services</summary>
+
+| File | Summary |
+| --- | --- |
+| [imap_client.py](app/services/imap_client.py) | Async helpers for interacting with the IMAP server to list mailboxes, fetch, move, delete, and append messages. |
 
 </details>
 
@@ -177,7 +192,19 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
    ```
 
    Replace `BASE_URL` with the actual URL of your application (e.g., `https://api.servicesbyv.com/email/openapi.json`).
-   
+
+2. **Available IMAP Endpoints**:
+
+   | Method & Path | Description |
+   | --- | --- |
+   | `GET /folders` | List available mailboxes. |
+   | `GET /emails` | Retrieve messages from a folder with optional `limit`, `unread`, and `folder` query parameters. |
+   | `POST /emails/{uid}/move` | Move an email to another folder via the `folder` query parameter. |
+   | `POST /emails/{uid}/forward` | Forward a message using the same payload as the send endpoint. |
+   | `POST /emails/{uid}/reply` | Reply to a message using the same payload as the send endpoint. |
+   | `DELETE /emails/{uid}` | Delete a message from a folder (defaults to `INBOX`). |
+   | `POST /drafts` | Store a draft message in the "Drafts" folder. |
+
 ---
 
 ## 🛠 Project Changelog
