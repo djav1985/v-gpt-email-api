@@ -3,7 +3,13 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.models import EmailSummary, ErrorResponse, MessageResponse, SendEmailRequest
+from app.models import (
+    EmailSummary,
+    ErrorResponse,
+    MessageResponse,
+    SendEmailRequest,
+    ErrorCode,
+)
 
 
 @pytest.mark.asyncio
@@ -74,5 +80,5 @@ async def test_error_response_optional_code():
 
 @pytest.mark.asyncio
 async def test_error_response_with_code():
-    err = ErrorResponse(detail="Forbidden", code="forbidden")
-    assert err.code == "forbidden"
+    err = ErrorResponse(detail="Forbidden", code=ErrorCode.not_authorized)
+    assert err.code is ErrorCode.not_authorized

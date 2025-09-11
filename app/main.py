@@ -2,6 +2,7 @@ import os
 import logging
 import aiofiles
 from contextlib import asynccontextmanager
+from pydantic import ValidationError
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
@@ -22,34 +23,20 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app):
-    required = [
-        "ACCOUNT_EMAIL",
-        "ACCOUNT_PASSWORD",
-        "ACCOUNT_SMTP_SERVER",
-        "ACCOUNT_SMTP_PORT",
-        "ACCOUNT_IMAP_SERVER",
-        "ACCOUNT_IMAP_PORT",
-    ]
-    missing = [var for var in required if not os.getenv(var)]
-    if missing:
-        logger.error("Missing required environment variables: %s", ", ".join(missing))
+    try:
+        dependencies.settings = dependencies.Config()
+    except ValidationError as exc:
+        missing = [
+            ".".join(str(loc) for loc in err["loc"]).upper()
+            for err in exc.errors()
+            if err.get("type") == "missing"
+        ]
+        logger.error(
+            "Missing required environment variables: %s", ", ".join(missing)
+        )
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing)}"
-        )
-    try:
-        smtp_port = int(os.getenv("ACCOUNT_SMTP_PORT"))
-        imap_port = int(os.getenv("ACCOUNT_IMAP_PORT"))
-    except (TypeError, ValueError) as exc:
-        raise RuntimeError("Invalid SMTP or IMAP port") from exc
-
-    dependencies.settings = dependencies.Config(
-        account_email=os.getenv("ACCOUNT_EMAIL"),
-        account_password=os.getenv("ACCOUNT_PASSWORD"),
-        account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER"),
-        account_smtp_port=smtp_port,
-        account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER"),
-        account_imap_port=imap_port,
-    )
+        ) from exc
     try:
         async with aiofiles.open("config/signature.txt", "r") as file:
             dependencies.signature_text = await file.read()

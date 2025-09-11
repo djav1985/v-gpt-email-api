@@ -24,7 +24,7 @@ async def test_list_folders(monkeypatch, client):
     monkeypatch.setattr(imaplib, "IMAP4_SSL", lambda *a, **k: DummyIMAP())
     response = await client.get("/imap/folders")
     assert response.status_code == 200
-    assert response.json() == ["INBOX", "Archive"]
+    assert response.json() == {"folders": ["INBOX", "Archive"]}
 
 
 @pytest.mark.asyncio

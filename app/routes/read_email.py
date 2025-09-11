@@ -1,7 +1,13 @@
 from fastapi import APIRouter, Body, HTTPException, Path, Query, Security
 
 from ..dependencies import get_api_key, send_email
-from ..models import EmailSummary, ErrorResponse, MessageResponse, SendEmailRequest
+from ..models import (
+    EmailSummary,
+    ErrorResponse,
+    MessageResponse,
+    SendEmailRequest,
+    FoldersResponse,
+)
 from . import imap
 from .imap import move_email_action, delete_email_action, create_draft_action
 
@@ -95,17 +101,23 @@ async def get_emails(
 @read_router.get(
     "/folders",
     dependencies=[Security(get_api_key)],
+    response_model=FoldersResponse,
     summary="List mail folders",
     description="List available mail folders.",
     operation_id="list_folders",
     responses={
-        200: {"content": {"application/json": {"example": ["INBOX", "Archive"]}}},
+        200: {
+            "content": {"application/json": {"example": {"folders": ["INBOX", "Archive"]}}}
+        },
         400: {
             "model": ErrorResponse,
             "description": "Invalid request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Invalid request", "code": "invalid_request"}
+                    "example": {
+                        "detail": "Invalid request",
+                        "code": "invalid_request",
+                    }
                 }
             },
         },
@@ -126,7 +138,10 @@ async def get_emails(
             "description": "Forbidden",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Not authorized", "code": "not_authorized"}
+                    "example": {
+                        "detail": "Not authorized",
+                        "code": "not_authorized",
+                    }
                 }
             },
         },
@@ -135,7 +150,10 @@ async def get_emails(
             "description": "Folders not found",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Folders not found", "code": "not_found"}
+                    "example": {
+                        "detail": "Folders not found",
+                        "code": "not_found",
+                    }
                 }
             },
         },
@@ -144,15 +162,19 @@ async def get_emails(
             "description": "Server error",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Server error", "code": "server_error"}
+                    "example": {
+                        "detail": "Server error",
+                        "code": "server_error",
+                    }
                 }
             },
         },
     },
 )
-async def get_folders() -> list[str]:
+async def get_folders() -> FoldersResponse:
     try:
-        return await imap.list_mailboxes()
+        folders = await imap.list_mailboxes()
+        return FoldersResponse(folders=folders)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

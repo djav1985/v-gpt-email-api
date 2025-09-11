@@ -11,7 +11,13 @@ from fastapi import APIRouter, HTTPException, Query, Path, Body, Security
 
 from .. import dependencies
 from ..dependencies import get_api_key
-from ..models import EmailSummary, MessageResponse, SendEmailRequest
+from ..models import (
+    EmailSummary,
+    MessageResponse,
+    SendEmailRequest,
+    FoldersResponse,
+    EmailBody,
+)
 
 
 def _decode_header(value: str) -> str:
@@ -256,10 +262,15 @@ async def create_draft_action(request: SendEmailRequest) -> MessageResponse:
 imap_router = APIRouter(prefix="/imap", tags=["IMAP"])
 
 
-@imap_router.get("/folders", dependencies=[Security(get_api_key)])
-async def get_folders() -> list[str]:
+@imap_router.get(
+    "/folders",
+    dependencies=[Security(get_api_key)],
+    response_model=FoldersResponse,
+)
+async def get_folders() -> FoldersResponse:
     try:
-        return await list_mailboxes()
+        folders = await list_mailboxes()
+        return FoldersResponse(folders=folders)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -302,11 +313,17 @@ async def delete_email(
     return await delete_email_action(uid, folder)
 
 
-@imap_router.get("/emails/{uid}", dependencies=[Security(get_api_key)])
-async def get_email(uid: str = Path(...), folder: str = Query("INBOX")) -> dict:
+@imap_router.get(
+    "/emails/{uid}",
+    dependencies=[Security(get_api_key)],
+    response_model=EmailBody,
+)
+async def get_email(
+    uid: str = Path(...), folder: str = Query("INBOX")
+) -> EmailBody:
     try:
         msg = await fetch_message(uid, folder)
-        return {"body": extract_body(msg)}
+        return EmailBody(body=extract_body(msg))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

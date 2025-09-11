@@ -15,7 +15,7 @@ async def test_get_folders(monkeypatch, client):
     monkeypatch.setattr(imap, "list_mailboxes", mock_list_mailboxes)
     response = await client.get("/folders")
     assert response.status_code == 200
-    assert response.json() == ["INBOX", "Archive"]
+    assert response.json() == {"folders": ["INBOX", "Archive"]}
 
 
 @pytest.mark.asyncio
