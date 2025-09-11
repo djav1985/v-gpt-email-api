@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app):
-    logging.basicConfig(level=logging.INFO)
     required = [
         "ACCOUNT_EMAIL",
         "ACCOUNT_PASSWORD",

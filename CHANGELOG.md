@@ -34,7 +34,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Send email endpoint now returns HTTP 200 on success.
 - Forwarding emails respect the provided request body.
 - `limit` query parameters on email listing routes must be positive.
-- Console prints replaced with structured logging and logging configured at startup.
+- Console prints replaced with structured logging; logging configuration is now left to the host environment.
 - Startup now validates required environment variables before initializing settings.
 - Shared IMAP operations consolidated into reusable helpers.
 
