@@ -20,5 +20,5 @@ def env(monkeypatch):
 async def client(env):
     async with LifespanManager(app):
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            ac.headers["Authorization"] = "Bearer token"
+            ac.headers["X-API-Key"] = "token"
             yield ac

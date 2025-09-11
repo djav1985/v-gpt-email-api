@@ -3,7 +3,7 @@ from typing import AsyncGenerator
 import aiofiles
 from contextlib import asynccontextmanager
 from pydantic import ValidationError
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 
@@ -79,11 +79,12 @@ def custom_openapi() -> dict:
     security_scheme = (
         openapi_schema.get("components", {})
         .get("securitySchemes", {})
-        .get("HTTPBearer", {})
+        .get("APIKey", {})
     )
     if security_scheme:
-        security_scheme["description"] = "Provide the API key as a Bearer token"
-        security_scheme["bearerFormat"] = "API Key"
+        security_scheme[
+            "description"
+        ] = "Provide the API key via the X-API-Key header"
     openapi_schema["openapi"] = "3.1.0"
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -93,7 +94,7 @@ app.openapi = custom_openapi
 
 
 @app.exception_handler(HTTPException)
-def http_exception_handler(exc: HTTPException) -> JSONResponse:
+def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
