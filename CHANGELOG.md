@@ -7,6 +7,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 ### Added
 - IMAP configuration (`ACCOUNT_IMAP_SERVER`, `ACCOUNT_IMAP_PORT`).
 - IMAP utilities and API endpoints for listing folders, fetching, moving, forwarding, replying, deleting, and drafting emails.
+- Dedicated `imap` router consolidating IMAP operations.
 - Support for moving emails from arbitrary source folders.
 - Forward and reply endpoints now reuse the original message and set threading headers.
 - Mailbox parsing handles quoted names and spaces.
@@ -29,3 +30,6 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Explicit operation IDs defined for read email endpoints.
 - `send_email` accepts a list of attachment URLs via `file_urls` instead of a comma-separated string.
 - API routes now use `Security(get_api_key)` for API-key protection and include descriptive OpenAPI tags.
+
+### Removed
+- Deprecated `app/services/imap_client.py` in favor of a dedicated IMAP router.
