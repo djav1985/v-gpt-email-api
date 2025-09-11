@@ -94,8 +94,13 @@ def test_forward_email(monkeypatch):
     monkeypatch.setattr(imap_client, "extract_body", lambda msg: "body")
     monkeypatch.setattr(imap_client, "decode_header_value", lambda v: v)
     monkeypatch.setattr("app.routes.read_email.send_email", mock_send)
-    response = client.post("/emails/1/forward", json={"to_addresses": ["a@b.com"], "subject": "", "body": "", "file_url": None})
+    response = client.post(
+        "/emails/1/forward",
+        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+    )
     assert response.status_code == 200
+    assert sent["subject"] == "S"
+    assert sent["body"] == "body"
     assert sent["headers"]["In-Reply-To"] == "<1@example.com>"
     assert sent["headers"]["References"] == "<1@example.com>"
     assert response.json() == {"message": "Email forwarded"}
@@ -120,9 +125,13 @@ def test_reply_email(monkeypatch):
     monkeypatch.setattr(imap_client, "extract_body", lambda msg: "orig body")
     monkeypatch.setattr(imap_client, "decode_header_value", lambda v: v)
     monkeypatch.setattr("app.routes.read_email.send_email", mock_send)
-    response = client.post("/emails/2/reply", json={"to_addresses": ["a@b.com"], "subject": "", "body": "", "file_url": None})
+    response = client.post(
+        "/emails/2/reply",
+        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+    )
     assert response.status_code == 200
-    assert sent["subject"].startswith("Re: ")
+    assert sent["subject"] == "S"
+    assert sent["body"] == "B"
     assert sent["headers"]["In-Reply-To"] == "<2@example.com>"
     assert response.json() == {"message": "Email sent"}
 

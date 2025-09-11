@@ -15,7 +15,7 @@ os.environ["ACCOUNT_IMAP_PORT"] = "993"
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.models import SendEmailRequest, EmailSummary  # noqa: E402
+from app.models import EmailSummary, MessageResponse, SendEmailRequest  # noqa: E402
 
 
 def test_send_email_request_invalid_email():
@@ -28,6 +28,25 @@ def test_send_email_request_long_subject():
         SendEmailRequest(to_addresses=["a@b.com"], subject="a" * 256, body="B")
 
 
+def test_send_email_request_empty_fields():
+    with pytest.raises(ValidationError):
+        SendEmailRequest(to_addresses=[], subject="S", body="B")
+    with pytest.raises(ValidationError):
+        SendEmailRequest(to_addresses=["a@b.com"], subject="", body="B")
+    with pytest.raises(ValidationError):
+        SendEmailRequest(to_addresses=["a@b.com"], subject="S", body="")
+
+
+def test_send_email_request_invalid_attachment_urls():
+    with pytest.raises(ValidationError):
+        SendEmailRequest(
+            to_addresses=["a@b.com"],
+            subject="S",
+            body="B",
+            file_url="https://example.com,not-a-url",
+        )
+
+
 def test_email_summary_alias_and_datetime():
     dt = datetime(2024, 1, 1, 12, 0, 0)
     summary = EmailSummary(uid="1", subject="S", **{"from": "a@b.com"}, date=dt, seen=True)
@@ -35,3 +54,15 @@ def test_email_summary_alias_and_datetime():
     assert data["from"] == "a@b.com"
     json_data = summary.model_dump_json(by_alias=True)
     assert dt.isoformat() in json_data
+
+
+def test_email_summary_invalid_uid():
+    with pytest.raises(ValidationError):
+        EmailSummary(uid="", seen=True)
+    with pytest.raises(ValidationError):
+        EmailSummary(uid=None, seen=True)  # type: ignore
+
+
+def test_message_response_empty_message():
+    with pytest.raises(ValidationError):
+        MessageResponse(message="")
