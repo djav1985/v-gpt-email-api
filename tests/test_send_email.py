@@ -2,6 +2,7 @@
 import os
 import sys
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 os.environ["ACCOUNT_EMAIL"] = "user@example.com"
 os.environ["ACCOUNT_PASSWORD"] = "password"
@@ -30,3 +31,33 @@ def test_send_email(monkeypatch):
     )
     assert response.status_code == 201
     assert response.json() == {"message": "Email sent successfully"}
+
+def test_send_email_http_error(monkeypatch):
+    async def mock_send(*a, **k):
+        raise HTTPException(status_code=400, detail="bad")
+    monkeypatch.setattr("app.routes.send_email.send_email", mock_send)
+    resp = client.post(
+        "/",
+        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+    )
+    assert resp.status_code == 400
+
+
+def test_send_email_generic_error(monkeypatch):
+    async def mock_send(*a, **k):
+        raise RuntimeError("boom")
+    monkeypatch.setattr("app.routes.send_email.send_email", mock_send)
+    resp = client.post(
+        "/",
+        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+    )
+    assert resp.status_code == 500
+
+
+def test_send_email_missing_settings(monkeypatch):
+    monkeypatch.setattr(dependencies, "settings", None)
+    resp = client.post(
+        "/",
+        json={"to_addresses": ["a@b.com"], "subject": "S", "body": "B", "file_url": None},
+    )
+    assert resp.status_code == 500

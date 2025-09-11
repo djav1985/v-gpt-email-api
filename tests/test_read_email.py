@@ -142,3 +142,35 @@ def test_create_draft(monkeypatch):
     assert response.status_code == 200
     assert called["folder"] == "Drafts"
     assert response.json() == {"message": "Draft stored"}
+
+def test_get_folders_error(monkeypatch):
+    async def fail():
+        raise RuntimeError("boom")
+    monkeypatch.setattr(imap_client, "list_mailboxes", fail)
+    resp = client.get("/folders")
+    assert resp.status_code == 500
+
+
+def test_get_emails_error(monkeypatch):
+    async def fail(folder, limit, unread_only):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(imap_client, "fetch_messages", fail)
+    resp = client.get("/emails")
+    assert resp.status_code == 500
+
+
+def test_move_email_error(monkeypatch):
+    async def fail(uid, folder, source_folder):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(imap_client, "move_message", fail)
+    resp = client.post("/emails/1/move?folder=Archive")
+    assert resp.status_code == 500
+
+
+def test_create_draft_missing_settings(monkeypatch):
+    monkeypatch.setattr(dependencies, "settings", None)
+    resp = client.post(
+        "/drafts",
+        json={"to_addresses": ["x@y.com"], "subject": "S", "body": "B", "file_url": None},
+    )
+    assert resp.status_code == 500
