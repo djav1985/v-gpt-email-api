@@ -24,6 +24,13 @@ from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
 
+api_key_scheme = HTTPBearer(
+    auto_error=False,
+    scheme_name="APIKey",
+    description="Supply the API key as a Bearer token in the Authorization header.",
+)
+
+
 class Config(BaseSettings):
     """Application configuration loaded from environment variables."""
 
@@ -184,7 +191,7 @@ async def send_email(
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 async def get_api_key(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(api_key_scheme),
 ) -> Optional[str]:
     # Retrieve the API key from the environment
     expected_key = os.getenv("API_KEY")

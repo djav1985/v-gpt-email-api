@@ -27,3 +27,7 @@ class EmailSummary(BaseModel):
     class Config:
         allow_population_by_field_name = True
         json_encoders = {datetime: lambda v: v.isoformat()}
+
+
+class MessageResponse(BaseModel):
+    message: str
