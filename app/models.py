@@ -13,3 +13,14 @@ class SendEmailRequest(BaseModel):
         None,
         description="The URL or comma-separated URLs of the files to be downloaded and attached to the email.",
     )
+
+
+class EmailSummary(BaseModel):
+    uid: str
+    subject: str | None = None
+    from_: str | None = Field(None, alias="from")
+    date: str | None = None
+    seen: bool
+
+    class Config:
+        allow_population_by_field_name = True
