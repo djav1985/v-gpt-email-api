@@ -1,37 +1,25 @@
-import os
-import sys
-from fastapi.testclient import TestClient
+from datetime import datetime
 
-os.environ["ACCOUNT_EMAIL"] = "user@example.com"
-os.environ["ACCOUNT_PASSWORD"] = "password"
-os.environ["ACCOUNT_SMTP_SERVER"] = "smtp.example.com"
-os.environ["ACCOUNT_SMTP_PORT"] = "587"
-os.environ["ACCOUNT_IMAP_SERVER"] = "imap.example.com"
-os.environ["ACCOUNT_IMAP_PORT"] = "993"
+import pytest
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.main import app  # noqa: E402
-from app.routes import imap  # noqa: E402
-from app.models import EmailSummary  # noqa: E402
-from app import dependencies  # noqa: E402
-from datetime import datetime  # noqa: E402
-
-dependencies.settings = dependencies.Config()
-client = TestClient(app)
+from app.routes import imap
+from app.models import EmailSummary
+from app import dependencies
 
 
-def test_get_folders(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_folders(monkeypatch, client):
     async def mock_list_mailboxes():
         return ["INBOX", "Archive"]
 
     monkeypatch.setattr(imap, "list_mailboxes", mock_list_mailboxes)
-    response = client.get("/folders")
+    response = await client.get("/folders")
     assert response.status_code == 200
     assert response.json() == ["INBOX", "Archive"]
 
 
-def test_get_emails(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_emails(monkeypatch, client):
     sample = [
         EmailSummary(
             uid="1",
@@ -46,23 +34,26 @@ def test_get_emails(monkeypatch):
         return sample
 
     monkeypatch.setattr(imap, "fetch_messages", mock_fetch_messages)
-    response = client.get("/emails?folder=INBOX&limit=1")
+    response = await client.get("/emails?folder=INBOX&limit=1")
     assert response.status_code == 200
     data = response.json()
     assert data[0]["uid"] == "1"
 
 
-def test_get_emails_negative_limit():
-    resp = client.get("/emails?limit=-1")
+@pytest.mark.asyncio
+async def test_get_emails_negative_limit(client):
+    resp = await client.get("/emails?limit=-1")
     assert resp.status_code == 422
 
 
-def test_imap_emails_negative_limit():
-    resp = client.get("/imap/emails?limit=-1")
+@pytest.mark.asyncio
+async def test_imap_emails_negative_limit(client):
+    resp = await client.get("/imap/emails?limit=-1")
     assert resp.status_code == 422
 
 
-def test_move_email(monkeypatch):
+@pytest.mark.asyncio
+async def test_move_email(monkeypatch, client):
     called = {}
 
     async def mock_move(uid, folder, source_folder):
@@ -71,13 +62,14 @@ def test_move_email(monkeypatch):
         called["source"] = source_folder
 
     monkeypatch.setattr(imap, "move_message", mock_move)
-    response = client.post("/emails/1/move?folder=Archive&source_folder=Old")
+    response = await client.post("/emails/1/move?folder=Archive&source_folder=Old")
     assert response.status_code == 200
     assert called == {"uid": "1", "folder": "Archive", "source": "Old"}
     assert response.json() == {"message": "Email moved"}
 
 
-def test_delete_email(monkeypatch):
+@pytest.mark.asyncio
+async def test_delete_email(monkeypatch, client):
     called = {}
 
     async def mock_delete(uid, folder):
@@ -85,13 +77,14 @@ def test_delete_email(monkeypatch):
         called["folder"] = folder
 
     monkeypatch.setattr(imap, "delete_message", mock_delete)
-    response = client.delete("/emails/2?folder=INBOX")
+    response = await client.delete("/emails/2?folder=INBOX")
     assert response.status_code == 200
     assert called == {"uid": "2", "folder": "INBOX"}
     assert response.json() == {"message": "Email deleted"}
 
 
-def test_forward_email(monkeypatch):
+@pytest.mark.asyncio
+async def test_forward_email(monkeypatch, client):
     class DummyMessage:
         def __init__(self):
             self.headers = {"Message-ID": "<1@example.com>", "Subject": "Original"}
@@ -119,13 +112,13 @@ def test_forward_email(monkeypatch):
     monkeypatch.setattr(imap, "extract_body", lambda msg: "body")
     monkeypatch.setattr(imap, "decode_header_value", lambda v: v)
     monkeypatch.setattr("app.routes.read_email.send_email", mock_send)
-    response = client.post(
+    response = await client.post(
         "/emails/1/forward",
         json={
             "to_addresses": ["a@b.com"],
             "subject": "S",
             "body": "B",
-            "file_url": None,
+            "file_urls": None,
         },
     )
     assert response.status_code == 200
@@ -136,7 +129,8 @@ def test_forward_email(monkeypatch):
     assert response.json() == {"message": "Email forwarded"}
 
 
-def test_reply_email(monkeypatch):
+@pytest.mark.asyncio
+async def test_reply_email(monkeypatch, client):
     class DummyMessage:
         def __init__(self):
             self.headers = {"Message-ID": "<2@example.com>", "Subject": "Orig"}
@@ -164,13 +158,13 @@ def test_reply_email(monkeypatch):
     monkeypatch.setattr(imap, "extract_body", lambda msg: "orig body")
     monkeypatch.setattr(imap, "decode_header_value", lambda v: v)
     monkeypatch.setattr("app.routes.read_email.send_email", mock_send)
-    response = client.post(
+    response = await client.post(
         "/emails/2/reply",
         json={
             "to_addresses": ["a@b.com"],
             "subject": "S",
             "body": "B",
-            "file_url": None,
+            "file_urls": None,
         },
     )
     assert response.status_code == 200
@@ -180,20 +174,21 @@ def test_reply_email(monkeypatch):
     assert response.json() == {"message": "Email sent"}
 
 
-def test_create_draft(monkeypatch):
+@pytest.mark.asyncio
+async def test_create_draft(monkeypatch, client):
     called = {}
 
     async def mock_append(folder, msg):
         called["folder"] = folder
 
     monkeypatch.setattr(imap, "append_message", mock_append)
-    response = client.post(
+    response = await client.post(
         "/drafts",
         json={
             "to_addresses": ["x@y.com"],
             "subject": "S",
             "body": "B",
-            "file_url": None,
+            "file_urls": None,
         },
     )
     assert response.status_code == 200
@@ -201,42 +196,46 @@ def test_create_draft(monkeypatch):
     assert response.json() == {"message": "Draft stored"}
 
 
-def test_get_folders_error(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_folders_error(monkeypatch, client):
     async def fail():
         raise RuntimeError("boom")
 
     monkeypatch.setattr(imap, "list_mailboxes", fail)
-    resp = client.get("/folders")
+    resp = await client.get("/folders")
     assert resp.status_code == 500
 
 
-def test_get_emails_error(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_emails_error(monkeypatch, client):
     async def fail(folder, limit, unread_only):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(imap, "fetch_messages", fail)
-    resp = client.get("/emails")
+    resp = await client.get("/emails")
     assert resp.status_code == 500
 
 
-def test_move_email_error(monkeypatch):
+@pytest.mark.asyncio
+async def test_move_email_error(monkeypatch, client):
     async def fail(uid, folder, source_folder):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(imap, "move_message", fail)
-    resp = client.post("/emails/1/move?folder=Archive")
+    resp = await client.post("/emails/1/move?folder=Archive")
     assert resp.status_code == 500
 
 
-def test_create_draft_missing_settings(monkeypatch):
+@pytest.mark.asyncio
+async def test_create_draft_missing_settings(monkeypatch, client):
     monkeypatch.setattr(dependencies, "settings", None)
-    resp = client.post(
+    resp = await client.post(
         "/drafts",
         json={
             "to_addresses": ["x@y.com"],
             "subject": "S",
             "body": "B",
-            "file_url": None,
+            "file_urls": None,
         },
     )
     assert resp.status_code == 500

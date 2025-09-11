@@ -88,7 +88,7 @@ async def send_email_endpoint(
 ) -> MessageResponse:
     subject = request.subject
     body = request.body
-    file_urls = [str(url) for url in request.file_url] if request.file_url else None
+    file_urls = [str(url) for url in request.file_urls] if request.file_urls else None
 
     try:
         await send_email(request.to_addresses, subject, body, file_urls=file_urls)

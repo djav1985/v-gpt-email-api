@@ -25,7 +25,7 @@ class SendEmailRequest(BaseModel):
         min_length=1,
         json_schema_extra={"example": "Hi there"},
     )
-    file_url: Optional[list[HttpUrl]] = Field(
+    file_urls: Optional[list[HttpUrl]] = Field(
         default=None,
         description=(
             "The URL or comma-separated URLs of the files to be downloaded and "
@@ -34,7 +34,7 @@ class SendEmailRequest(BaseModel):
         json_schema_extra={"example": ["https://example.com/file.txt"]},
     )
 
-    @field_validator("file_url", mode="before")
+    @field_validator("file_urls", mode="before")
     @classmethod
     def split_file_urls(cls, value: Optional[str | list[str]]) -> Optional[list[str]]:
         if value in (None, ""):
@@ -44,7 +44,7 @@ class SendEmailRequest(BaseModel):
         if isinstance(value, str):
             urls = [v.strip() for v in value.split(",") if v.strip()]
             return urls or None
-        raise TypeError("file_url must be a string or list of URLs")
+        raise TypeError("file_urls must be a string or list of URLs")
 
 
 class EmailSummary(BaseModel):

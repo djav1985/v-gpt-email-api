@@ -36,13 +36,19 @@ async def lifespan(app):
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing)}"
         )
+    try:
+        smtp_port = int(os.getenv("ACCOUNT_SMTP_PORT"))
+        imap_port = int(os.getenv("ACCOUNT_IMAP_PORT"))
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("Invalid SMTP or IMAP port") from exc
+
     dependencies.settings = dependencies.Config(
         account_email=os.getenv("ACCOUNT_EMAIL"),
         account_password=os.getenv("ACCOUNT_PASSWORD"),
         account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER"),
-        account_smtp_port=int(os.getenv("ACCOUNT_SMTP_PORT")),
+        account_smtp_port=smtp_port,
         account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER"),
-        account_imap_port=int(os.getenv("ACCOUNT_IMAP_PORT")),
+        account_imap_port=imap_port,
     )
     try:
         async with aiofiles.open("config/signature.txt", "r") as file:

@@ -1,34 +1,10 @@
-import os
-import sys
 from email.message import EmailMessage
-from fastapi.testclient import TestClient
 import imaplib
 import pytest
 
-os.environ["ACCOUNT_EMAIL"] = "user@example.com"
-os.environ["ACCOUNT_PASSWORD"] = "password"
-os.environ["ACCOUNT_SMTP_SERVER"] = "smtp.example.com"
-os.environ["ACCOUNT_SMTP_PORT"] = "587"
-os.environ["ACCOUNT_IMAP_SERVER"] = "imap.example.com"
-os.environ["ACCOUNT_IMAP_PORT"] = "993"
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.main import app  # noqa: E402
-from app import dependencies  # noqa: E402
-
-
-@pytest.fixture(autouse=True)
-def setup_settings():
-    dependencies.settings = dependencies.Config()
-    yield
-    dependencies.settings = None
-
-
-client = TestClient(app)
-
-
-def test_list_folders(monkeypatch):
+@pytest.mark.asyncio
+async def test_list_folders(monkeypatch, client):
     class DummyIMAP:
         def login(self, *args, **kwargs):
             pass
@@ -46,12 +22,13 @@ def test_list_folders(monkeypatch):
             pass
 
     monkeypatch.setattr(imaplib, "IMAP4_SSL", lambda *a, **k: DummyIMAP())
-    response = client.get("/imap/folders")
+    response = await client.get("/imap/folders")
     assert response.status_code == 200
     assert response.json() == ["INBOX", "Archive"]
 
 
-def test_fetch_messages(monkeypatch):
+@pytest.mark.asyncio
+async def test_fetch_messages(monkeypatch, client):
     class DummyIMAP:
         def login(self, *args, **kwargs):
             pass
@@ -78,13 +55,14 @@ def test_fetch_messages(monkeypatch):
             pass
 
     monkeypatch.setattr(imaplib, "IMAP4_SSL", lambda *a, **k: DummyIMAP())
-    response = client.get("/imap/emails")
+    response = await client.get("/imap/emails")
     assert response.status_code == 200
     data = response.json()
     assert data[0]["subject"] == "Test"
 
 
-def test_fetch_message(monkeypatch):
+@pytest.mark.asyncio
+async def test_fetch_message(monkeypatch, client):
     class DummyIMAP:
         def login(self, *args, **kwargs):
             pass
@@ -106,6 +84,6 @@ def test_fetch_message(monkeypatch):
             pass
 
     monkeypatch.setattr(imaplib, "IMAP4_SSL", lambda *a, **k: DummyIMAP())
-    response = client.get("/imap/emails/1")
+    response = await client.get("/imap/emails/1")
     assert response.status_code == 200
     assert response.json()["body"].strip() == "hi"

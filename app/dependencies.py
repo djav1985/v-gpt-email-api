@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import mimetypes
 import asyncio
+from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Depends
@@ -69,7 +70,12 @@ async def fetch_file(session, url, temp_dir) -> str:
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="Invalid URL scheme")
 
-    filename = url.split("/")[-1]
+    if ".." in Path(parsed.path).parts:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    filename = os.path.basename(parsed.path)
+    if not filename:
+        raise HTTPException(status_code=400, detail="Invalid file path")
     _, file_extension = os.path.splitext(filename)
 
     # Check if the file type is allowed
@@ -180,7 +186,7 @@ async def send_email(
             logger.exception("Unexpected error during file handling")
             raise
         finally:
-            shutil.rmtree(temp_dir)
+            await asyncio.to_thread(shutil.rmtree, temp_dir)
 
     try:
         await aiosmtplib.send(
@@ -200,15 +206,11 @@ async def send_email(
 
 
 def get_api_key(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(api_key_scheme),
-) -> Optional[str]:
-    # Retrieve the API key from the environment
+    credentials: HTTPAuthorizationCredentials | None = Depends(api_key_scheme),
+) -> str:
     expected_key = os.getenv("API_KEY")
-
-    # If API_KEY is set in the environment, enforce validation
-    if expected_key:
-        if not credentials or credentials.credentials != expected_key:
-            raise HTTPException(status_code=403, detail="Invalid or missing API key")
-
-    # If API_KEY is not set, allow access without validation
-    return credentials.credentials if credentials else None
+    if not credentials or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=403, detail="Invalid or missing credentials")
+    if expected_key and credentials.credentials != expected_key:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    return credentials.credentials
