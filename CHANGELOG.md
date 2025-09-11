@@ -18,3 +18,8 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Named API key bearer security scheme exposed in the OpenAPI schema.
 - Tests for API key validation and email sending error handling.
 - Extensive tests for dependencies, IMAP client, routes, models, and startup logic.
+- `account_reply_to` configuration option for customizing the Reply-To header.
+
+### Changed
+- Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
+- Explicit operation IDs defined for read email endpoints.

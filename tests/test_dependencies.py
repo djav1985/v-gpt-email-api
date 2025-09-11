@@ -93,7 +93,7 @@ def test_send_email_with_attachment(monkeypatch):
         sent["msg"] = msg
 
     monkeypatch.setattr(aiosmtplib, "send", mock_send)
-    dependencies.ACCOUNT_REPLY_TO = "reply@example.com"
+    dependencies.settings.account_reply_to = "reply@example.com"
     asyncio.run(dependencies.send_email(["a@b.com"], "Sub", "Body", "http://f1.txt"))
     assert "Reply-To" in sent["msg"]
 
@@ -128,7 +128,7 @@ def test_send_email_single_file_oversize(monkeypatch):
 
 
 def test_send_email_missing_reply_to(monkeypatch):
-    dependencies.ACCOUNT_REPLY_TO = None
+    dependencies.settings.account_reply_to = None
     sent = {}
 
     async def mock_send(msg, **kwargs):

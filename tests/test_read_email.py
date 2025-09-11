@@ -20,7 +20,6 @@ from datetime import datetime
 from app.routes import read_email
 
 dependencies.settings = dependencies.Config()
-read_email.settings = dependencies.settings
 client = TestClient(app)
 
 

@@ -43,11 +43,11 @@ class Config(BaseSettings):
     from_name: str = Field(default="", env="FROM_NAME")
     attachment_concurrency: int = Field(default=3, env="ATTACHMENT_CONCURRENCY")
     start_tls: bool = Field(default=True, env="START_TLS")
+    account_reply_to: EmailStr | None = Field(default=None, env="ACCOUNT_REPLY_TO")
 
 
 settings: Config | None = None
 signature_text: str = ""
-ACCOUNT_REPLY_TO = os.getenv("ACCOUNT_REPLY_TO")
 
 ALLOWED_FILE_TYPES = {
     ".zip",
@@ -107,8 +107,8 @@ async def send_email(
     msg["From"] = f"{settings.from_name} <{settings.account_email}>"
     msg["To"] = ", ".join(to_addresses)
     msg["Subject"] = subject
-    if ACCOUNT_REPLY_TO is not None:
-        msg["Reply-To"] = ACCOUNT_REPLY_TO
+    if settings.account_reply_to is not None:
+        msg["Reply-To"] = settings.account_reply_to
 
     msg.attach(MIMEText(body + signature_text, "html"))
 
