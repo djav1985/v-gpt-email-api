@@ -1,12 +1,47 @@
+# flake8: noqa
 import asyncio
 import imaplib
 import email
 import time
+import re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import parsedate_to_datetime
 
 from ..dependencies import settings
 from ..models import EmailSummary
+
+
+def _decode_header(value: str) -> str:
+    parts = email.header.decode_header(value)
+    decoded = []
+    for part, enc in parts:
+        if isinstance(part, bytes):
+            decoded.append(part.decode(enc or "utf-8", errors="ignore"))
+        else:
+            decoded.append(part)
+    return "".join(decoded)
+
+
+def decode_header_value(value: str) -> str:
+    return _decode_header(value)
+
+
+def _extract_body(msg: email.message.Message) -> str:
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_type() == "text/plain" and not part.get_filename():
+                payload = part.get_payload(decode=True)
+                return payload.decode(part.get_content_charset() or "utf-8", errors="ignore")
+    else:
+        payload = msg.get_payload(decode=True)
+        if payload:
+            return payload.decode(msg.get_content_charset() or "utf-8", errors="ignore")
+    return ""
+
+
+def extract_body(msg: email.message.Message) -> str:
+    return _extract_body(msg)
 
 
 async def list_mailboxes() -> list[str]:
@@ -22,11 +57,13 @@ async def list_mailboxes() -> list[str]:
                 return []
             mailboxes: list[str] = []
             for mbox in data:
-                parts = mbox.decode().split(' "" "')
-                if len(parts) > 1:
-                    mailboxes.append(parts[-1].strip('"'))
+                line = mbox.decode()
+                match = re.search(r'"((?:\\"|[^"])*)"$', line)
+                if match:
+                    name = match.group(1).replace('\\"', '"')
                 else:
-                    mailboxes.append(mbox.decode())
+                    name = line.split()[-1]
+                mailboxes.append(name)
             return mailboxes
 
     return await asyncio.to_thread(inner)
@@ -56,19 +93,19 @@ async def fetch_messages(folder: str = "INBOX", limit: int = 10, unread_only: bo
                 header_bytes = msg_data[0][1]
                 flag_info = msg_data[0][0].decode()
                 msg = email.message_from_bytes(header_bytes)
-                subject, _ = email.header.decode_header(msg.get('Subject', ''))[0]
-                if isinstance(subject, bytes):
-                    subject = subject.decode(errors='ignore')
-                from_ = email.utils.parseaddr(msg.get('From', ''))[1]
-                date = msg.get('Date', '')
+                subject = _decode_header(msg.get('Subject', ''))
+                from_raw = _decode_header(msg.get('From', ''))
+                from_ = email.utils.parseaddr(from_raw)[1]
+                date_raw = msg.get('Date', '')
+                date = parsedate_to_datetime(date_raw) if date_raw else None
                 seen = "\\Seen" in flag_info
-                summaries.append(EmailSummary(uid=uid.decode(), subject=subject or "", from_=from_, date=date or "", seen=seen))
+                summaries.append(EmailSummary(uid=uid.decode(), subject=subject or "", from_=from_, date=date, seen=seen))
             return summaries
 
     return await asyncio.to_thread(inner)
 
 
-async def move_message(uid: str, folder: str) -> None:
+async def move_message(uid: str, folder: str, source_folder: str = "INBOX") -> None:
     """Move a message to another folder."""
 
     def inner() -> None:
@@ -76,7 +113,7 @@ async def move_message(uid: str, folder: str) -> None:
             raise RuntimeError("Settings have not been initialized")
         with imaplib.IMAP4_SSL(settings.account_imap_server, settings.account_imap_port) as imap:
             imap.login(settings.account_email, settings.account_password)
-            imap.select("INBOX")
+            imap.select(source_folder)
             imap.uid("COPY", uid, folder)
             imap.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
             imap.expunge()
@@ -110,3 +147,20 @@ async def append_message(folder: str, msg: MIMEMultipart) -> None:
             imap.append(folder, "", imaplib.Time2Internaldate(time.time()), msg.as_bytes())
 
     await asyncio.to_thread(inner)
+
+
+async def fetch_message(uid: str, folder: str = "INBOX") -> email.message.Message:
+    """Fetch a full message by UID."""
+
+    def inner() -> email.message.Message:
+        if settings is None:
+            raise RuntimeError("Settings have not been initialized")
+        with imaplib.IMAP4_SSL(settings.account_imap_server, settings.account_imap_port) as imap:
+            imap.login(settings.account_email, settings.account_password)
+            imap.select(folder)
+            typ, msg_data = imap.uid("fetch", uid, "(RFC822)")
+            if typ != "OK" or msg_data is None or not msg_data[0]:
+                raise RuntimeError("Failed to fetch message")
+            return email.message_from_bytes(msg_data[0][1])
+
+    return await asyncio.to_thread(inner)
