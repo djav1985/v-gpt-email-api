@@ -94,8 +94,29 @@ def test_send_email_with_attachment(monkeypatch):
 
     monkeypatch.setattr(aiosmtplib, "send", mock_send)
     dependencies.settings.account_reply_to = "reply@example.com"
-    asyncio.run(dependencies.send_email(["a@b.com"], "Sub", "Body", "http://f1.txt"))
+    asyncio.run(
+        dependencies.send_email(
+            ["a@b.com"], "Sub", "Body", ["http://f1.txt"]
+        )
+    )
     assert "Reply-To" in sent["msg"]
+
+
+def test_send_email_with_multiple_attachments(monkeypatch):
+    monkeypatch.setattr(dependencies, "fetch_file", fake_fetch_file)
+    sent = {}
+
+    async def mock_send(msg, **kwargs):
+        sent["msg"] = msg
+
+    monkeypatch.setattr(aiosmtplib, "send", mock_send)
+    asyncio.run(
+        dependencies.send_email(
+            ["a@b.com"], "Sub", "Body", ["http://f1.txt", "http://f2.txt"]
+        )
+    )
+    # 1 body part + 2 attachments
+    assert len(sent["msg"].get_payload()) == 3
 
 
 def test_send_email_total_size_exceeded(monkeypatch):
@@ -111,7 +132,7 @@ def test_send_email_total_size_exceeded(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
             dependencies.send_email(
-                ["a@b.com"], "Sub", "Body", "http://f1.txt,http://f2.txt"
+                ["a@b.com"], "Sub", "Body", ["http://f1.txt", "http://f2.txt"]
             )
         )
     assert exc.value.status_code == 413
@@ -122,7 +143,7 @@ def test_send_email_single_file_oversize(monkeypatch):
     monkeypatch.setattr("app.dependencies.os.path.getsize", lambda _: 25 * 1024 * 1024)
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            dependencies.send_email(["a@b.com"], "Sub", "Body", "http://f1.txt")
+            dependencies.send_email(["a@b.com"], "Sub", "Body", ["http://f1.txt"])
         )
     assert exc.value.status_code == 413
 

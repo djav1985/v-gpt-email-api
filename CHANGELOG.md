@@ -24,3 +24,4 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
 - Explicit operation IDs defined for read email endpoints.
+- `send_email` accepts a list of attachment URLs via `file_urls` instead of a comma-separated string.
