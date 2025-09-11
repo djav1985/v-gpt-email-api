@@ -1,19 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ..models import SendEmailRequest
+from ..models import SendEmailRequest, MessageResponse
 from ..dependencies import send_email, get_api_key
 
-send_router = APIRouter()
+send_router = APIRouter(tags=["Send"])
 
 
-@send_router.post("/", operation_id="send_email", dependencies=[Depends(get_api_key)])
-async def send_email_endpoint(request: SendEmailRequest):
+@send_router.post(
+    "/",
+    operation_id="send_email",
+    dependencies=[Depends(get_api_key)],
+    summary="Send an email",
+    description="Send an email to one or more recipients.",
+    status_code=201,
+    response_model=MessageResponse,
+    responses={
+        400: {"description": "Invalid request"},
+        500: {"description": "Server error"},
+    },
+)
+async def send_email_endpoint(request: SendEmailRequest) -> MessageResponse:
     subject = request.subject
     body = request.body
     file_url = request.file_url
 
     try:
         await send_email(request.to_addresses, subject, body, file_url)
-        return {"message": "Email sent successfully"}
+        return MessageResponse(message="Email sent successfully")
     except HTTPException as e:
         print(f"HTTPException: {e.detail}")
         raise HTTPException(status_code=e.status_code, detail=e.detail)

@@ -59,6 +59,7 @@ def test_move_email(monkeypatch):
     response = client.post("/emails/1/move?folder=Archive&source_folder=Old")
     assert response.status_code == 200
     assert called == {"uid": "1", "folder": "Archive", "source": "Old"}
+    assert response.json() == {"message": "Email moved"}
 
 
 def test_delete_email(monkeypatch):
@@ -72,6 +73,7 @@ def test_delete_email(monkeypatch):
     response = client.delete("/emails/2?folder=INBOX")
     assert response.status_code == 200
     assert called == {"uid": "2", "folder": "INBOX"}
+    assert response.json() == {"message": "Email deleted"}
 
 
 def test_forward_email(monkeypatch):
@@ -97,6 +99,7 @@ def test_forward_email(monkeypatch):
     assert response.status_code == 200
     assert sent["headers"]["In-Reply-To"] == "<1@example.com>"
     assert sent["headers"]["References"] == "<1@example.com>"
+    assert response.json() == {"message": "Email forwarded"}
 
 
 def test_reply_email(monkeypatch):
@@ -122,6 +125,7 @@ def test_reply_email(monkeypatch):
     assert response.status_code == 200
     assert sent["subject"].startswith("Re: ")
     assert sent["headers"]["In-Reply-To"] == "<2@example.com>"
+    assert response.json() == {"message": "Email sent"}
 
 
 def test_create_draft(monkeypatch):
@@ -137,3 +141,4 @@ def test_create_draft(monkeypatch):
     )
     assert response.status_code == 200
     assert called["folder"] == "Drafts"
+    assert response.json() == {"message": "Draft stored"}
