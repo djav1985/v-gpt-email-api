@@ -16,7 +16,7 @@ async def test_startup_with_signature(tmp_path):
     sig_file.write_text("Hello")
     async with LifespanManager(app):
         async with AsyncClient(app=app, base_url="http://test") as client:
-            client.headers["Authorization"] = "Bearer token"
+            client.headers["X-API-Key"] = "token"
             await client.get("/openapi.json")
     assert dependencies.signature_text == "Hello"
     if original is not None:
@@ -34,7 +34,7 @@ async def test_startup_without_signature(tmp_path):
     dependencies.signature_text = ""
     async with LifespanManager(app):
         async with AsyncClient(app=app, base_url="http://test") as client:
-            client.headers["Authorization"] = "Bearer token"
+            client.headers["X-API-Key"] = "token"
             await client.get("/openapi.json")
     assert dependencies.signature_text == ""
     if temp.exists():
@@ -53,7 +53,7 @@ async def test_startup_does_not_configure_logging(monkeypatch):
     monkeypatch.setattr(logging, "basicConfig", fake_basicConfig)
     async with LifespanManager(app):
         async with AsyncClient(app=app, base_url="http://test") as client:
-            client.headers["Authorization"] = "Bearer token"
+            client.headers["X-API-Key"] = "token"
             await client.get("/openapi.json")
     assert not called
     assert logging.getLogger().level == original_level

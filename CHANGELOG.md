@@ -16,7 +16,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Email summary dates stored as `datetime` and serialized in ISO format.
 - Send/Read tags added to the FastAPI application.
 - Consistent `MessageResponse` model used across message endpoints and documented error responses.
-- Named API key bearer security scheme exposed in the OpenAPI schema.
+- Named `X-API-Key` header security scheme exposed in the OpenAPI schema.
 - Tests for API key validation and email sending error handling.
 - Extensive tests for dependencies, IMAP client, routes, models, and startup logic.
 - `account_reply_to` configuration option for customizing the Reply-To header.
@@ -49,7 +49,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Removed blanket `flake8` ignores in favor of targeted suppressions.
 - `SendEmailRequest.file_url` renamed to `file_urls`.
 - Attachment filenames are sanitized and path traversal is blocked.
-- `get_api_key` now requires a Bearer token and rejects missing credentials.
+- `get_api_key` now requires an `X-API-Key` header and rejects missing credentials.
 - Invalid SMTP or IMAP port values raise a descriptive `RuntimeError`.
 - Temporary attachment directories are removed in a background thread to avoid blocking.
 

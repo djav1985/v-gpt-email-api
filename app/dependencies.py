@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import APIKeyHeader
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -25,10 +25,11 @@ from pydantic import EmailStr
 from pydantic_settings import BaseSettings
 
 
-api_key_scheme = HTTPBearer(
+api_key_scheme = APIKeyHeader(
+    name="X-API-Key",
     auto_error=False,
     scheme_name="APIKey",
-    description="Supply the API key as a Bearer token in the Authorization header.",
+    description="Supply the API key via the X-API-Key header.",
 )
 
 
@@ -205,12 +206,10 @@ async def send_email(
         raise HTTPException(status_code=500, detail="Unexpected error")
 
 
-def get_api_key(
-    credentials: HTTPAuthorizationCredentials | None = Depends(api_key_scheme),
-) -> str:
+def get_api_key(api_key: str | None = Depends(api_key_scheme)) -> str:
     expected_key = os.getenv("API_KEY")
-    if not credentials or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=403, detail="Invalid or missing credentials")
-    if expected_key and credentials.credentials != expected_key:
+    if not api_key:
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
-    return credentials.credentials
+    if expected_key and api_key != expected_key:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    return api_key

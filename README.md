@@ -55,7 +55,7 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 | 🔌 | **Integrations**  | Integrates key libraries such as FastAPI, Uvicorn, Pydantic for data validation, aiosmtplib for email, and aiohttp for HTTP requests. Environment variables managed using `python-dotenv`. Docker integration for containerization. |
 | 🧩 | **Modularity**    | The codebase is highly modular with separate files for dependencies, models, and routes, facilitating reusability and easy maintenance. Logical separation of concerns across the application layers. |
 | ⚡️  | **Performance**   | High efficiency and performance due to asynchronous programming with FastAPI and Uvicorn. Docker ensures optimized resource usage by providing isolated environments. |
-| 🛡️ | **Security**      | Uses environment variables for sensitive configurations, API key validation for access control, and enforces file size and type constraints. Prioritizes secure email transmission and data protection. |
+| 🛡️ | **Security**      | Uses environment variables for sensitive configurations, API key validation via the `X-API-Key` header for access control, and enforces file size and type constraints. Prioritizes secure email transmission and data protection. |
 | 📦 | **Dependencies**  | Key dependencies include `aiohttp`, `pydantic`, `uvicorn`, `fastapi`, `aiosmtplib`, `python-dotenv`, and `aiofiles`. Managed using `requirements.txt` for easy installation and updates. |
 | 🚀 | **Scalability**   | Designed for scalability with Docker and FastAPI. Can handle increased load efficiently due to asynchronous request handling and container orchestration capabilities provided by Docker Compose. |
 ```
@@ -156,6 +156,12 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
     The service validates the SMTP settings on startup. Ensure `ACCOUNT_EMAIL`,
     `ACCOUNT_PASSWORD`, `ACCOUNT_SMTP_SERVER`, and `ACCOUNT_SMTP_PORT` are set
     or the application will raise a runtime error at launch.
+
+   If `API_KEY` is set, include it in requests using the `X-API-Key` header:
+
+   ```bash
+   curl -H "X-API-Key: $API_KEY" https://api.example.com/email/...
+   ```
 
 3. **Run the Docker Compose**:  
    Use the following command to start the service:

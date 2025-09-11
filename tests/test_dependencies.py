@@ -4,7 +4,6 @@ import aiofiles
 import aiosmtplib
 import pytest
 from fastapi import HTTPException
-from fastapi.security import HTTPAuthorizationCredentials
 
 from app import dependencies
 
@@ -176,24 +175,21 @@ async def test_send_email_smtp_exception(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_api_key_without_env(monkeypatch):
     monkeypatch.delenv("API_KEY", raising=False)
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
-    assert dependencies.get_api_key(credentials=creds) == "token"
+    assert dependencies.get_api_key(api_key="token") == "token"
     with pytest.raises(HTTPException):
-        dependencies.get_api_key(credentials=None)
+        dependencies.get_api_key(api_key=None)
 
 
 @pytest.mark.asyncio
 async def test_get_api_key_with_env_valid(monkeypatch):
     monkeypatch.setenv("API_KEY", "secret")
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="secret")
-    assert dependencies.get_api_key(credentials=creds) == "secret"
+    assert dependencies.get_api_key(api_key="secret") == "secret"
 
 
 @pytest.mark.asyncio
 async def test_get_api_key_with_env_invalid(monkeypatch):
     monkeypatch.setenv("API_KEY", "secret")
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="wrong")
     with pytest.raises(HTTPException):
-        dependencies.get_api_key(credentials=creds)
+        dependencies.get_api_key(api_key="wrong")
     with pytest.raises(HTTPException):
-        dependencies.get_api_key(credentials=None)
+        dependencies.get_api_key(api_key=None)
