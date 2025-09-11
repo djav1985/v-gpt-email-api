@@ -24,7 +24,8 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Standardized `ErrorResponse` model with example payloads and documented 401/403 responses.
 - Example request bodies and success responses for email routes and models.
 - OpenAPI metadata now declares version 3.1.0 and derives the server URL from `BASE_URL` and `ROOT_PATH` environment variables.
- - Streaming attachment downloads to disk to limit memory usage.
+- Streaming attachment downloads to disk to limit memory usage.
+- Added `requirements-dev.txt` with `pytest` and `pytest-asyncio`, and documented test execution steps.
 
 ### Changed
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.

@@ -196,11 +196,20 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
    | `DELETE /emails/{uid}` | Delete a message from a folder (defaults to `INBOX`). |
    | `POST /drafts` | Store a draft message in the "Drafts" folder. |
 
+### 🧪 Testing
+
+Run the test suite locally with:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
 ---
 
 ## 🛠 Project Changelog
 
--  `► `
+-  `► Added pytest configuration and testing instructions`
 -  `► `
 -  `► `
 
