@@ -1,11 +1,24 @@
-# models.py
+"""Common data models and request/response schemas."""
+
 from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator, ConfigDict
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response format across all apps."""
+    status: int = Field(..., description="HTTP status code of the error")
+    code: str = Field(..., description="Application-specific error identifier") 
+    message: str = Field(..., description="Human-readable summary of the error")
+    details: Optional[str] = Field(
+        None, description="Additional information that may help resolve the error"
+    )
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class SendEmailRequest(BaseModel):
@@ -96,16 +109,12 @@ class MessageResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    detail: str = Field(
-        ...,
-        min_length=1,
-        description="Error message detail.",
-        json_schema_extra={"example": "Invalid request"},
-    )
-    code: ErrorCode | None = Field(
-        default=None,
-        description="Optional error code.",
-        json_schema_extra={"example": "invalid_request"},
+    """Standard error response format across all apps."""
+    status: int = Field(..., description="HTTP status code of the error")
+    code: str = Field(..., description="Application-specific error identifier") 
+    message: str = Field(..., description="Human-readable summary of the error")
+    details: Optional[str] = Field(
+        None, description="Additional information that may help resolve the error"
     )
 
 

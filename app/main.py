@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from . import dependencies
+from .config import Config
 from .routes.imap import imap_router
 from .routes.read_email import read_router
 from .routes.send_email import send_router
@@ -26,7 +27,7 @@ tags_metadata = [
 async def lifespan(app) -> AsyncGenerator[None, None]:
     """Load configuration and signature text at startup."""
     try:
-        dependencies.settings = dependencies.Config()
+        dependencies.settings = Config()
     except ValidationError as exc:
         missing = [
             ".".join(str(loc) for loc in err["loc"]).upper()
@@ -38,13 +39,14 @@ async def lifespan(app) -> AsyncGenerator[None, None]:
         ) from exc
 
     try:
-        async with aiofiles.open("config/signature.txt", "r") as file:
+        async with aiofiles.open("app/config/signature.txt", "r") as file:
             dependencies.signature_text = await file.read()
     except FileNotFoundError:
         dependencies.signature_text = ""
     yield
 
 
+# FastAPI application instance
 app = FastAPI(
     title="Email Management API",
     version="0.1.0",
@@ -62,8 +64,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-# Routers
+# Include routers
 app.include_router(send_router)
 app.include_router(read_router)
 app.include_router(imap_router)
@@ -81,15 +82,15 @@ def custom_openapi() -> dict:
         tags=tags_metadata,
         servers=app.servers,
     )
-    security_scheme = (
-        openapi_schema.get("components", {})
-        .get("securitySchemes", {})
-        .get("APIKey", {})
-    )
-    if security_scheme:
-        security_scheme[
-            "description"
-        ] = "Provide the API key via the X-API-Key header"
+    # Add API key authentication scheme
+    openapi_schema.setdefault("components", {}).setdefault(
+        "securitySchemes", {}
+    )["ApiKeyAuth"] = {
+        "type": "apiKey",
+        "name": "X-API-Key", 
+        "in": "header",
+        "description": "Provide the API key via the X-API-Key header"
+    }
     openapi_schema["openapi"] = "3.1.0"
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -100,7 +101,7 @@ app.openapi = custom_openapi
 
 @app.exception_handler(HTTPException)
 def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Return JSON errors for ``HTTPException`` instances."""
+    """Return JSON errors for HTTPException instances."""
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
