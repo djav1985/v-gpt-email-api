@@ -10,7 +10,8 @@ from ..models import (
     MessageResponse,
     SendEmailRequest,
 )
-from . import COMMON_ERROR_RESPONSES, imap
+from app.common import COMMON_ERROR_RESPONSES
+from . import imap
 from .imap import create_draft_action, delete_email_action, move_email_action
 
 read_router = APIRouter(tags=["Read"])
@@ -72,7 +73,11 @@ async def get_emails(
     operation_id="list_folders",
     responses={
         200: {
-            "content": {"application/json": {"example": {"folders": ["INBOX", "Archive"]}}}
+            "content": {
+                "application/json": {
+                    "example": {"folders": ["INBOX", "Archive"]}
+                }
+            }
         },
         404: {
             "model": ErrorResponse,
@@ -172,7 +177,10 @@ async def forward_email(
     try:
         original = await imap.fetch_message(uid, folder)
         original_body = imap.extract_body(original)
-        body = f"{request.body}\n\n{original_body}" if request.body else original_body
+        body = (
+            f"{request.body}\n\n{original_body}"
+            if request.body else original_body
+        )
         subject = request.subject or imap.decode_header_value(
             original.get("Subject", "")
         )
@@ -181,7 +189,10 @@ async def forward_email(
         if msg_id:
             headers["In-Reply-To"] = msg_id
             headers["References"] = msg_id
-        file_urls = [str(url) for url in request.file_urls] if request.file_urls else None
+        file_urls = (
+            [str(url) for url in request.file_urls]
+            if request.file_urls else None
+        )
         await send_email(
             request.to_addresses, subject, body, file_urls=file_urls, headers=headers
         )
@@ -241,7 +252,10 @@ async def reply_email(
         if msg_id:
             headers["In-Reply-To"] = msg_id
             headers["References"] = msg_id
-        file_urls = [str(url) for url in request.file_urls] if request.file_urls else None
+        file_urls = (
+            [str(url) for url in request.file_urls]
+            if request.file_urls else None
+        )
         await send_email(
             request.to_addresses, subject, body, file_urls=file_urls, headers=headers
         )

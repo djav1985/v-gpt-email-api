@@ -27,7 +27,19 @@ tags_metadata = [
 async def lifespan(app) -> AsyncGenerator[None, None]:
     """Load configuration and signature text at startup."""
     try:
-        dependencies.settings = Config()
+        dependencies.settings = Config(
+            account_email=os.getenv("ACCOUNT_EMAIL", ""),
+            account_password=os.getenv("ACCOUNT_PASSWORD", ""),
+            account_smtp_server=os.getenv("ACCOUNT_SMTP_SERVER", ""),
+            account_smtp_port=int(os.getenv("ACCOUNT_SMTP_PORT", "587")),
+            account_imap_server=os.getenv("ACCOUNT_IMAP_SERVER", ""),
+            account_imap_port=int(os.getenv("ACCOUNT_IMAP_PORT", "993")),
+            api_key=os.getenv("API_KEY", ""),
+            from_name=os.getenv("FROM_NAME", ""),
+            attachment_concurrency=int(os.getenv("ATTACHMENT_CONCURRENCY", "3")),
+            start_tls=os.getenv("START_TLS", "true").lower() == "true",
+            account_reply_to=os.getenv("ACCOUNT_REPLY_TO", None),
+        )
     except ValidationError as exc:
         missing = [
             ".".join(str(loc) for loc in err["loc"]).upper()
@@ -87,7 +99,7 @@ def custom_openapi() -> dict:
         "securitySchemes", {}
     )["ApiKeyAuth"] = {
         "type": "apiKey",
-        "name": "X-API-Key", 
+        "name": "X-API-Key",
         "in": "header",
         "description": "Provide the API key via the X-API-Key header"
     }

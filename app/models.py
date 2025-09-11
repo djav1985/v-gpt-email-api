@@ -12,12 +12,11 @@ from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator, Confi
 class ErrorResponse(BaseModel):
     """Standard error response format across all apps."""
     status: int = Field(..., description="HTTP status code of the error")
-    code: str = Field(..., description="Application-specific error identifier") 
+    code: str = Field(..., description="Application-specific error identifier")
     message: str = Field(..., description="Human-readable summary of the error")
     details: Optional[str] = Field(
         None, description="Additional information that may help resolve the error"
     )
-
     model_config = ConfigDict(extra="forbid")
 
 
@@ -105,16 +104,6 @@ class MessageResponse(BaseModel):
         min_length=1,
         description="Human-readable response message.",
         json_schema_extra={"example": "Email sent"},
-    )
-
-
-class ErrorResponse(BaseModel):
-    """Standard error response format across all apps."""
-    status: int = Field(..., description="HTTP status code of the error")
-    code: str = Field(..., description="Application-specific error identifier") 
-    message: str = Field(..., description="Human-readable summary of the error")
-    details: Optional[str] = Field(
-        None, description="Additional information that may help resolve the error"
     )
 
 

@@ -21,7 +21,7 @@ from ..models import (
     MessageResponse,
     SendEmailRequest,
 )
-from . import COMMON_ERROR_RESPONSES
+from app.common import COMMON_ERROR_RESPONSES
 
 
 def _decode_header(value: str) -> str:
@@ -46,7 +46,9 @@ def _extract_body(msg: message.Message) -> str:
             if part.get_content_type() == "text/plain" and not part.get_filename():
                 payload = part.get_payload(decode=True)
                 if isinstance(payload, bytes):
-                    return payload.decode(part.get_content_charset() or "utf-8", errors="ignore")
+                    return payload.decode(
+                        part.get_content_charset() or "utf-8", errors="ignore"
+                    )
                 elif isinstance(payload, str):
                     return payload
     else:
@@ -232,7 +234,7 @@ async def fetch_message(uid: str, folder: str = "INBOX") -> message.Message:
                 raise RuntimeError("Failed to fetch message")
             # msg_data[0][1] should be bytes
             return email.message_from_bytes(msg_data[0][1])
-## Removed custom message_from_bytes helper, use email.message_from_bytes directly
+# Removed custom message_from_bytes helper, use email.message_from_bytes directly
 
     return await asyncio.to_thread(inner)
 
