@@ -25,3 +25,8 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - Routes and IMAP client now reference settings dynamically via `dependencies.settings`.
 - Explicit operation IDs defined for read email endpoints.
 - `send_email` accepts a list of attachment URLs via `file_urls` instead of a comma-separated string.
+
+### Fixed
+- Docker images now load the ASGI application via `uvicorn app.main:app` so that package-relative imports resolve in containers.
+- FastAPI helpers (`get_openapi`, `HTTPException`, `Request`, `JSONResponse`) are imported in `app/main.py` to avoid `NameError`
+  during startup.

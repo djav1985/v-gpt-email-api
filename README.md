@@ -166,14 +166,20 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
     `ACCOUNT_PASSWORD`, `ACCOUNT_SMTP_SERVER`, and `ACCOUNT_SMTP_PORT` are set
     or the application will raise a runtime error at launch.
 
-3. **Run the Docker Compose**:  
+3. **Run the Docker Compose**:
    Use the following command to start the service:
 
    ```bash
    docker-compose up
    ```
 
-4. **(Optional) Run in Detached Mode**:  
+   The provided Dockerfile now copies the application into an `app/` package and runs
+   `uvicorn app.main:app` so that the FastAPI module is loaded through the package.
+   When building your own images or launching Uvicorn locally, use the same module
+   path (or ensure the source lives inside an `app/` package) to keep the relative
+   imports working.
+
+4. **(Optional) Run in Detached Mode**:
    To run the containers in the background, use:
 
    ```bash
@@ -209,7 +215,8 @@ The v-gpt-email-api is a sophisticated email management system designed to enhan
 
 ## 🛠 Project Changelog
 
--  `► `
+-  `► `2025-09-19: Container images run `uvicorn app.main:app` and document the
+   package import requirement for consistent deployment.
 -  `► `
 -  `► `
 

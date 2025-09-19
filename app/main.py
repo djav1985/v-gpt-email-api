@@ -1,7 +1,10 @@
 # main,py
 import os
+
 import aiofiles
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 
 from . import dependencies
 from .routes.send_email import send_router
