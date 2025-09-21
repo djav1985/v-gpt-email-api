@@ -1,5 +1,5 @@
 # flake8: noqa
-# dependancies.py
+# dependencies.py
 import os
 import aiosmtplib
 import aiofiles
@@ -21,7 +21,7 @@ from email import encoders
 from typing import Optional
 
 from pydantic import EmailStr, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 api_key_scheme = HTTPBearer(
@@ -33,17 +33,19 @@ api_key_scheme = HTTPBearer(
 
 class Config(BaseSettings):
     """Application configuration loaded from environment variables."""
+    
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    account_email: EmailStr = Field(env="ACCOUNT_EMAIL")
-    account_password: str = Field(env="ACCOUNT_PASSWORD")
-    account_smtp_server: str = Field(env="ACCOUNT_SMTP_SERVER")
-    account_smtp_port: int = Field(env="ACCOUNT_SMTP_PORT")
-    account_imap_server: str = Field(env="ACCOUNT_IMAP_SERVER")
-    account_imap_port: int = Field(env="ACCOUNT_IMAP_PORT")
-    from_name: str = Field(default="", env="FROM_NAME")
-    attachment_concurrency: int = Field(default=3, env="ATTACHMENT_CONCURRENCY")
-    start_tls: bool = Field(default=True, env="START_TLS")
-    account_reply_to: EmailStr | None = Field(default=None, env="ACCOUNT_REPLY_TO")
+    account_email: EmailStr
+    account_password: str
+    account_smtp_server: str
+    account_smtp_port: int
+    account_imap_server: str
+    account_imap_port: int
+    from_name: str = ""
+    attachment_concurrency: int = 3
+    start_tls: bool = True
+    account_reply_to: EmailStr | None = None
 
 
 settings: Config | None = None
@@ -79,7 +81,6 @@ async def fetch_file(session, url, temp_dir) -> str:
     timeout = aiohttp.ClientTimeout(total=10)
     async with session.get(url, timeout=timeout) as response:
         if response.status != 200:
-            print(f"Failed to download file from {url} with status {response.status}")
             raise HTTPException(
                 status_code=response.status,
                 detail=f"Failed to download file from {url}",
@@ -134,16 +135,18 @@ async def send_email(
                 for file_path in file_paths:
                     file_size = os.path.getsize(file_path)
 
-                    if file_size + total_size > MAX_ATTACHMENT_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail="Total attachment size exceeds 20MB limit",
-                        )
-
+                    # Check individual file size limit
                     if file_size > MAX_ATTACHMENT_SIZE:
                         raise HTTPException(
                             status_code=413,
                             detail=f"Attachment {os.path.basename(file_path)} exceeds the 20MB limit",
+                        )
+
+                    # Check total attachment size limit
+                    if file_size + total_size > MAX_ATTACHMENT_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail="Total attachment size exceeds 20MB limit",
                         )
 
                     total_size += file_size
@@ -163,14 +166,12 @@ async def send_email(
                         f"attachment; filename={os.path.basename(file_path)}",
                     )
                     msg.attach(part)
-        except HTTPException as e:
-            print(f"HTTPException during file handling: {e.detail}")
+        except HTTPException:
             raise
         except Exception as e:
-            print(f"Unexpected error during file handling: {str(e)}")
-            raise
+            raise HTTPException(status_code=500, detail=f"File handling error: {str(e)}")
         finally:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     try:
         await aiosmtplib.send(
@@ -182,10 +183,8 @@ async def send_email(
             start_tls=settings.start_tls,
         )
     except aiosmtplib.errors.SMTPException as e:
-        print(f"SMTPException: {str(e)}")
         raise HTTPException(status_code=500, detail=f"SMTP server error: {str(e)}")
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 async def get_api_key(

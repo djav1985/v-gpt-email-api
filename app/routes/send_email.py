@@ -30,9 +30,7 @@ async def send_email_endpoint(request: SendEmailRequest) -> MessageResponse:
             request.to_addresses, subject, body, file_urls=file_urls
         )
         return MessageResponse(message="Email sent successfully")
-    except HTTPException as e:
-        print(f"HTTPException: {e.detail}")
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

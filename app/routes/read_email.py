@@ -111,8 +111,8 @@ async def forward_email(
             request.to_addresses, subject, body, file_urls=file_urls, headers=headers
         )
         return MessageResponse(message="Email forwarded")
-    except HTTPException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -149,8 +149,8 @@ async def reply_email(
             request.to_addresses, subject, body, file_urls=file_urls, headers=headers
         )
         return MessageResponse(message="Email sent")
-    except HTTPException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

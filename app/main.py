@@ -1,7 +1,10 @@
-# main,py
+# main.py
 import os
 import aiofiles
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
 
 from . import dependencies
 from .routes.send_email import send_router
@@ -9,6 +12,19 @@ from .routes.read_email import read_router
 
 
 tags_metadata = [{"name": "Send"}, {"name": "Read"}]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    dependencies.settings = dependencies.Config()
+    try:
+        async with aiofiles.open("config/signature.txt", "r") as file:
+            dependencies.signature_text = await file.read()
+    except FileNotFoundError:
+        dependencies.signature_text = ""
+    yield
+    # Shutdown
 
 
 # FastAPI application instance setup
@@ -24,23 +40,15 @@ app = FastAPI(
             "url": f"{os.getenv('BASE_URL', '')}{os.getenv('ROOT_PATH', '')}",
             "description": "Base API server",
         }
-    ]
+    ],
+    lifespan=lifespan,
 )
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    dependencies.settings = dependencies.Config()
-    try:
-        async with aiofiles.open("config/signature.txt", "r") as file:
-            dependencies.signature_text = await file.read()
-    except FileNotFoundError:
-        dependencies.signature_text = ""
 
 
 # Include routers for feature modules
 app.include_router(send_router)
 app.include_router(read_router)
+
 
 def custom_openapi() -> dict:
     if app.openapi_schema:
@@ -67,6 +75,7 @@ def custom_openapi() -> dict:
 
 
 app.openapi = custom_openapi
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):

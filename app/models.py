@@ -3,13 +3,13 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator, ConfigDict, field_serializer
 
 class SendEmailRequest(BaseModel):
     to_addresses: list[EmailStr] = Field(
         ...,
         description="List of recipient email addresses.",
-        min_items=1,
+        min_length=1,
     )
     subject: str = Field(
         ...,
@@ -41,15 +41,17 @@ class SendEmailRequest(BaseModel):
 
 
 class EmailSummary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
     uid: str = Field(..., min_length=1)
     subject: str | None = None
     from_: str | None = Field(None, alias="from")
     date: datetime | None = None
     seen: bool
-
-    class Config:
-        allow_population_by_field_name = True
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    
+    @field_serializer('date')
+    def serialize_datetime(self, dt: datetime | None) -> str | None:
+        return dt.isoformat() if dt else None
 
 
 class MessageResponse(BaseModel):
