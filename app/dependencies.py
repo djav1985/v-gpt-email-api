@@ -70,7 +70,14 @@ async def fetch_file(session, url, temp_dir) -> str:
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="Invalid URL scheme")
 
-    filename = url.split("/")[-1]
+    # Extract filename from URL path, ignoring query params and fragments
+    path = parsed.path
+    filename = path.split("/")[-1] if path else "file"
+    
+    # If no filename in path, create a generic one with the allowed extension
+    if not filename or "." not in filename:
+        filename = "file.txt"
+    
     _, file_extension = os.path.splitext(filename)
 
     # Check if the file type is allowed

@@ -2,7 +2,7 @@
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
 
 from ..dependencies import get_api_key, send_email
 from ..models import SendEmailRequest, EmailSummary, MessageResponse
@@ -95,7 +95,7 @@ async def move_email(
 )
 async def forward_email(
     uid: str = Path(..., description="UID of the email to forward"),
-    request: SendEmailRequest = ...,
+    request: SendEmailRequest = Body(...),
 ) -> MessageResponse:
     try:
         original = await imap_client.fetch_message(uid)
@@ -132,7 +132,7 @@ async def forward_email(
 )
 async def reply_email(
     uid: str = Path(..., description="UID of the email to reply to"),
-    request: SendEmailRequest = ...,
+    request: SendEmailRequest = Body(...),
 ) -> MessageResponse:
     try:
         original = await imap_client.fetch_message(uid)
